@@ -13,6 +13,12 @@ const P = require('./parsers');
 const i18n = require('./i18n');
 const { Updater, loadAutoUpdater } = require('./updater');
 
+// Media keys: Chromium on Windows routes them through its own media-session
+// (SMTC) handling, which depends on window state - after the mini player was
+// closed, keys from keyboards / Stream Deck-style pads stopped arriving.
+// Disable it so globalShortcut (RegisterHotKey) owns the keys regardless of windows.
+app.commandLine.appendSwitch('disable-features', 'HardwareMediaKeyHandling');
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
   process.exit(0);
@@ -113,7 +119,10 @@ function showMini() {
   if (w.webContents.isLoading()) w.webContents.once('did-finish-load', show); else show();
 }
 
-function hideMini() { if (miniWin && !miniWin.isDestroyed()) miniWin.hide(); }
+function hideMini() {
+  if (miniWin && !miniWin.isDestroyed()) miniWin.hide();
+  if (mediaKeysOn) registerMediaKeys();
+}
 
 function targetDisplay() {
   if (settings.fullscreenDisplay !== 'auto') {
@@ -248,18 +257,27 @@ async function command(name) {
   }
 }
 
+const MEDIA_KEYS = { MediaPlayPause: 'playpause', MediaNextTrack: 'next', MediaPreviousTrack: 'prev' };
+
+function registerMediaKeys() {
+  const failed = [];
+  for (const [key, cmd] of Object.entries(MEDIA_KEYS)) {
+    if (globalShortcut.isRegistered(key)) continue;
+    const ok = globalShortcut.register(key, () => { log(`media key: ${key}`); command(cmd); });
+    if (!ok) failed.push(key);
+  }
+  if (failed.length) log(`media keys not available (held by another app?): ${failed.join(', ')}`);
+}
+
 function updateMediaKeys(active) {
   const want = active && settings.mediaKeys;
-  if (want === mediaKeysOn) return;
+  if (want === mediaKeysOn) { if (want) registerMediaKeys(); return; }
   if (want) {
-    const ok = [
-      globalShortcut.register('MediaPlayPause', () => command('playpause')),
-      globalShortcut.register('MediaNextTrack', () => command('next')),
-      globalShortcut.register('MediaPreviousTrack', () => command('prev')),
-    ];
-    if (ok.includes(false)) log('some media keys are taken by another app');
+    registerMediaKeys();
+    log('media keys registered');
   } else {
-    for (const k of ['MediaPlayPause', 'MediaNextTrack', 'MediaPreviousTrack']) globalShortcut.unregister(k);
+    for (const k of Object.keys(MEDIA_KEYS)) globalShortcut.unregister(k);
+    log('media keys released');
   }
   mediaKeysOn = want;
 }
@@ -439,7 +457,20 @@ ipcMain.on('open-settings', () => openSettings());
 ipcMain.on('hide-mini', () => hideMini());
 
 // ---------------------------------------------------------------- lifecycle
-app.on('second-instance', () => { if (session.status !== 'idle') showMini(); else openSettings(); });
+// Stream Dock / shortcuts: FlickAirPlay.exe --cmd=playpause|next|prev|volup|voldown|full|mini|settings
+function runCliCommand(cmd) {
+  log(`cli command: ${cmd}`);
+  if (cmd === 'full') return openFull();
+  if (cmd === 'mini') return showMini();
+  if (cmd === 'settings') return openSettings();
+  return command(cmd);
+}
+
+app.on('second-instance', (_e, argv) => {
+  const cmd = P.parseCliCommand(argv);
+  if (cmd) { runCliCommand(cmd); return; }
+  if (session.status !== 'idle') showMini(); else openSettings();
+});
 app.on('window-all-closed', () => { /* keep running in the tray */ });
 
 async function quit() {
@@ -463,6 +494,9 @@ app.whenReady().then(async () => {
   // keep progress bars moving in open windows without flooding IPC
   setInterval(() => { if (session.status === 'playing') send('state', session.snapshot()); }, 1000);
   await engine.start(engineSettings());
+  setInterval(() => { if (mediaKeysOn) registerMediaKeys(); }, 30_000);
+  const startCmd = P.parseCliCommand(process.argv);
+  if (startCmd === 'full' || startCmd === 'settings' || startCmd === 'mini') runCliCommand(startCmd);
   checkNetworkProfile();
 
   updater = new Updater({

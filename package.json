@@ -1,7 +1,7 @@
 {
   "name": "flick-airplay-pc",
   "productName": "Flick AirPlay",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "AirPlay receiver for Windows: stream music from iPhone/iPad to your PC",
   "author": "Serhii Volkov (@sergvo1kov)",
   "license": "GPL-3.0-or-later",

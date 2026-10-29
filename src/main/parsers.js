@@ -53,6 +53,23 @@ function parseVideoEvent(line) {
   return null;
 }
 
+const CLI_COMMANDS = new Set(['playpause', 'next', 'prev', 'volup', 'voldown', 'full', 'mini', 'settings']);
+
+/** "--cmd=next" or "--cmd next" anywhere in argv -> 'next' (validated) */
+function parseCliCommand(argv = []) {
+  for (let i = 0; i < argv.length; i++) {
+    const a = String(argv[i]);
+    let v = null;
+    if (a.startsWith('--cmd=')) v = a.slice(6);
+    else if (a === '--cmd') v = argv[i + 1];
+    if (v != null) {
+      v = String(v).trim().toLowerCase();
+      return CLI_COMMANDS.has(v) ? v : null;
+    }
+  }
+  return null;
+}
+
 /** -dacp file: "<DACP-ID>\n<Active-Remote>\n" */
 function parseDacpFile(text) {
   if (!text) return null;
@@ -109,5 +126,5 @@ function pickClientIp(peers) {
 }
 
 module.exports = {
-  parseVideoEvent, parseMetadata, parseProgress, parseConnection, parseDacpFile, isRealCover, coverMime, parseNetstat, pickClientIp,
+  parseCliCommand, parseVideoEvent, parseMetadata, parseProgress, parseConnection, parseDacpFile, isRealCover, coverMime, parseNetstat, pickClientIp,
 };

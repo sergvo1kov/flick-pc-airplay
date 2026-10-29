@@ -342,3 +342,11 @@ test('engine: always hands UxPlay a language (YouTube/HLS mode asserts on it)', 
   // no UI language and a locale already present: leave it alone
   assert.equal(env('e', 'r', { LANG: 'de_DE.UTF-8' }).LANGUAGE, undefined);
 });
+
+test('cli: --cmd for Stream Dock / shortcuts', () => {
+  assert.equal(P.parseCliCommand(['C:\\Program Files\\FlickAirPlay\\FlickAirPlay.exe', '--cmd=playpause']), 'playpause');
+  assert.equal(P.parseCliCommand(['app.exe', '--cmd', 'NEXT']), 'next');
+  assert.equal(P.parseCliCommand(['app.exe', '--hidden']), null);
+  assert.equal(P.parseCliCommand(['app.exe', '--cmd=rm']), null);
+  assert.equal(P.parseCliCommand([]), null);
+});
