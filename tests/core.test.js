@@ -327,3 +327,18 @@ test('engine: crash event lets the app switch the next restart to audio-only', a
   assert.match(fs.readFileSync(path.join(dir, 'rt', 'uxplay.rc'), 'utf8'), /^vs 0$/m);
   await eng.stop();
 });
+
+test('engine: always hands UxPlay a language (YouTube/HLS mode asserts on it)', () => {
+  const { engineEnv: env, languageList } = require('../src/main/engine');
+  assert.equal(languageList('uk'), 'uk:en');
+  assert.equal(languageList('ru'), 'ru:en');
+  assert.equal(languageList('en'), 'en');
+  assert.equal(languageList(''), 'en');
+  // stock Windows: no locale variables at all -> must still get one
+  assert.equal(env('e', 'r', { Path: 'C:\\Windows' }).LANGUAGE, 'en');
+  assert.equal(env('e', 'r', { Path: 'C:\\Windows' }, 'uk').LANGUAGE, 'uk:en');
+  // UI language wins over an inherited Unix-style LANG
+  assert.equal(env('e', 'r', { LANG: 'C.UTF-8' }, 'ru').LANGUAGE, 'ru:en');
+  // no UI language and a locale already present: leave it alone
+  assert.equal(env('e', 'r', { LANG: 'de_DE.UTF-8' }).LANGUAGE, undefined);
+});

@@ -41,13 +41,25 @@ function buildRc(settings) {
   return lines.join('\n') + '\n';
 }
 
-function engineEnv(engineDir, runtimeDir, baseEnv = process.env) {
+/** HLS language list for UxPlay ("uk:en"). UxPlay -hls asserts that one exists. */
+function languageList(lang) {
+  const l = String(lang || '').toLowerCase().replace('_', '-');
+  if (!l || l === 'en') return 'en';
+  return `${l}:en`;
+}
+
+function engineEnv(engineDir, runtimeDir, baseEnv = process.env, uiLang = '') {
   const bin = path.join(engineDir, 'bin');
   const plugins = path.join(engineDir, 'lib', 'gstreamer-1.0');
   const env = { ...baseEnv };
   // Windows env keys are case-insensitive; drop every PATH variant before setting ours.
   const oldPath = env.PATH || env.Path || '';
   for (const k of Object.keys(env)) if (k.toUpperCase() === 'PATH' || k.toUpperCase() === 'UXPLAYRC') delete env[k];
+  // Windows has no LANGUAGE/LANG; UxPlay's YouTube (HLS) mode aborts without one
+  // (g_assert(!lang_system.empty()) -> exit 0xC0000409). It also picks the
+  // dubbed audio track from this list.
+  const hasLocale = ['LANGUAGE', 'LC_ALL', 'LC_MESSAGES', 'LANG'].some((k) => env[k]);
+  if (uiLang || !hasLocale) env.LANGUAGE = languageList(uiLang);
   return {
     ...env,
     PATH: `${bin}${path.delimiter}${oldPath}`,
@@ -113,7 +125,7 @@ class Engine extends EventEmitter {
     this._setState('starting');
     const proc = spawn(this.exePath, ['-rc', FILES.rc], {
       cwd: this.runtimeDir,
-      env: engineEnv(this.engineDir, this.runtimeDir),
+      env: engineEnv(this.engineDir, this.runtimeDir, process.env, settings.uiLanguage),
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -235,4 +247,4 @@ class Engine extends EventEmitter {
   }
 }
 
-module.exports = { Engine, buildRc, engineEnv, LineSplitter, FILES };
+module.exports = { Engine, buildRc, engineEnv, languageList, LineSplitter, FILES };

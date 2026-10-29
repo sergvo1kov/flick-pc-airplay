@@ -106,7 +106,10 @@ if [ -n "$NODE_BIN" ]; then
   "$NODE_BIN" -e "const p=require('path');const r=p.join(process.argv[1],'..','src','main');const {buildRc}=require(p.join(r,'engine.js'));const {sanitize}=require(p.join(r,'settings.js'));process.stdout.write(buildRc(sanitize({deviceName:'Flick CI Default'})))" "$(cygpath -w "$SCRIPTS")" > "$RT2/uxplay.rc"
   echo "d" >> "$RT2/uxplay.rc"     # debug log, so a failure says why
   cat "$RT2/uxplay.rc"
-  ( cd "$RT2" && exec uxplay.exe -rc uxplay.rc ) > "$RT2/out.log" 2>&1 &
+  # environment exactly as the app builds it on a stock Windows (no LANG/LANGUAGE)
+  LANG_FOR_ENGINE=$(env -u LANG -u LANGUAGE -u LC_ALL -u LC_MESSAGES "$NODE_BIN" -e "const p=require('path');console.log(require(p.join(process.argv[1],'..','src','main','engine.js')).engineEnv('e','r',process.env).LANGUAGE)" "$(cygpath -w "$SCRIPTS")")
+  note "ok   engine env LANGUAGE=$LANG_FOR_ENGINE (stock Windows has none)"
+  ( cd "$RT2" && exec env -u LANG -u LC_ALL -u LC_MESSAGES LANGUAGE="$LANG_FOR_ENGINE" uxplay.exe -rc uxplay.rc ) > "$RT2/out.log" 2>&1 &
   pid2=$!
   sleep 10
   if kill -0 "$pid2" 2>/dev/null; then
@@ -115,6 +118,9 @@ if [ -n "$NODE_BIN" ]; then
   else
     wait "$pid2"; note "FAIL default app config exited (code $?)"; fail=1
   fi
+  # control: without any language variable UxPlay -hls must abort (the v0.2.0 bug)
+  ( cd "$RT2" && exec /usr/bin/timeout 15 env -u LANG -u LANGUAGE -u LC_ALL -u LC_MESSAGES uxplay.exe -rc uxplay.rc ) > "$RT2/control.log" 2>&1
+  grep -q "lang_system.empty" "$RT2/control.log" && note "ok   control: reproduced v0.2.0 crash without LANGUAGE (fix is what prevents it)" || note "note: control run did not show the lang assertion"
   OUT2=$(grep -v -E "^raop_rtp|audio progress" "$RT2/out.log" | tr -d '\r' | grep -i -E -B2 -A6 "error|assert|critical|fail|launch string|pipeline" | tail -n 45 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
   echo "::notice title=default-config uxplay log (errors)::$OUT2"
 else
