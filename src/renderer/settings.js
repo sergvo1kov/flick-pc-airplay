@@ -3,12 +3,12 @@
 const { ICONS, fmt } = window.FlickUI;
 const $ = (id) => document.getElementById(id);
 
-const TOGGLES = ['autostart', 'showMiniOnPlay', 'autoFullscreen', 'miniAlwaysOnTop', 'mediaKeys', 'taperVolume', 'allowTakeover', 'mirroring'];
+const TOGGLES = ['autostart', 'showMiniOnPlay', 'autoFullscreen', 'miniAlwaysOnTop', 'mediaKeys', 'taperVolume', 'allowTakeover', 'video', 'videoFullscreen'];
 const LABELS = {
   hGeneral: 'sGeneral', lName: 'sDeviceName', lNameHint: 'sDeviceNameHint', lLang: 'sLanguage', oLangAuto: 'sLangAuto',
   lAutostart: 'sAutostart', hPlayer: 'sPlayer', lShowMini: 'sShowMini', lAutoFull: 'sAutoFull', lDisplay: 'sFullDisplay',
   lOnTop: 'sOnTop', lMediaKeys: 'sMediaKeys', hSound: 'sSound', lTaper: 'sTaper', lSink: 'sAudioSink', oSinkAuto: 'sAudioAuto',
-  hConn: 'sConnection', lTakeover: 'sTakeover', lMirror: 'sMirroring', lMirrorHint: 'sMirroringHint', lStatus: 'sStatus',
+  hConn: 'sConnection', lTakeover: 'sTakeover', lVideo: 'sVideo', lVideoHint: 'sVideoHint', lVideoFull: 'sVideoFull', lStatus: 'sStatus',
   restart: 'sRestart', logs: 'sLogs', save: 'sSave', saved: 'sSaved',
 };
 const STATE_KEYS = { starting: 'stStarting', running: 'stRunning', restarting: 'stRestarting', error: 'stError', stopped: 'stStopped' };
