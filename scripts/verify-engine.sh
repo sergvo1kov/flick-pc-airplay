@@ -21,8 +21,8 @@ fail=0
 REPORT=""
 note() { echo "$1"; REPORT="$REPORT$1%0A"; }
 # Elements UxPlay builds its audio (ALAC/AAC) and mirroring (H.264) pipelines from.
-for el in appsrc queue volume audioconvert audioresample avdec_alac avdec_aac autoaudiosink \
-          fakesink h264parse avdec_h264 decodebin playbin; do
+for el in appsrc queue volume level audioconvert audioresample avdec_alac avdec_aac aacparse autoaudiosink \
+          fakesink h264parse h265parse avdec_h264 videoflip videoconvert videoscale rtph264pay decodebin playbin; do
   if gst-inspect-1.0.exe "$el" >/dev/null 2>&1; then
     note "ok   $el"
   else
@@ -39,7 +39,7 @@ for pl in wasapi2 d3d11; do
     note "FAIL plugin $pl does not load"; fail=1
   fi
 done
-for el in wasapi2sink d3d11videosink d3d12videosink d3d11h264dec jpegdec mp4mux; do
+for el in wasapi2sink d3d11videosink d3d12videosink d3d11h264dec jpegdec mp4mux imagefreeze textoverlay; do
   gst-inspect-1.0.exe "$el" >/dev/null 2>&1 && note "ok   $el (optional)" || note "--   $el (optional/hardware, absent here)"
 done
 

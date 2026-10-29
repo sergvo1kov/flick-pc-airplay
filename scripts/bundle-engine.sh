@@ -13,13 +13,14 @@ PREFIX="${MINGW_PREFIX:-/ucrt64}"
 REQUIRED_PLUGINS=(
   coreelements typefindfunctions            # gstreamer core
   app audioconvert audioresample volume playback   # -base
-  autodetect                                 # -good: autoaudiosink/autovideosink
+  autodetect level videofilter              # -good: autoaudiosink, level (audio pipeline), videoflip
   libav                                      # avdec_alac, avdec_aac, avdec_h264
   videoparsersbad wasapi2 d3d11              # -bad: h264parse, audio out, video out
 )
 OPTIONAL_PLUGINS=(
   videoconvertscale videoconvert videoscale videorate audiorate rawparse  # -base (names vary by version)
   directsound jpeg isomp4 audioparsers rtp rtpmanager imagefreeze         # -good
+  pango                                                                    # -base: textoverlay (cover-art window mode only)
   wasapi d3d12 mediafoundation dxva                                       # -bad
 )
 
