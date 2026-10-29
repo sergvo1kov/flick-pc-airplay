@@ -22,12 +22,31 @@ const COMMANDS = new Set([
   'shuffle_songs',
 ]);
 
+/**
+ * iOS sends the DACP-ID header as a 64-bit hex number WITHOUT leading zeros
+ * ("BD2CD1D0834418"), but advertises its service with all 16 digits
+ * ("iTunes_Ctrl_00BD2CD1D0834418"). Same convention as shairport-sync.
+ */
+function dacpInstanceId(dacpId) {
+  const hex = String(dacpId || '').trim().toUpperCase().replace(/^0X/, '');
+  return hex.length < 16 ? hex.padStart(16, '0') : hex;
+}
+
+/** Compare two DACP ids ignoring leading zeros and case. */
+function sameDacpId(a, b) {
+  const norm = (x) => String(x || '').toUpperCase().replace(/^0+/, '');
+  return norm(a) !== '' && norm(a) === norm(b);
+}
+
+const INSTANCE_RE = /^iTunes_Ctrl_([0-9A-Fa-f]+)\._dacp\._tcp\.local$/;
+
 function resolveDacpService(dacpId, { clientIp, mdnsPort = 5353, timeoutMs = 1500, multicast = true } = {}) {
-  const instance = `iTunes_Ctrl_${dacpId}._dacp._tcp.local`;
+  const instance = `iTunes_Ctrl_${dacpInstanceId(dacpId)}._dacp._tcp.local`;
   return new Promise((resolve, reject) => {
     const sock = dgram.createSocket({ type: 'udp4', reuseAddr: true });
     const id = (Math.random() * 0xfffe + 1) | 0;
     let done = false;
+    const asked = new Set();
     const finish = (err, val) => {
       if (done) return;
       done = true;
@@ -43,8 +62,23 @@ function resolveDacpService(dacpId, { clientIp, mdnsPort = 5353, timeoutMs = 150
       try { msg = mdns.parseMessage(buf); } catch (_) { return; }
       if (!(msg.flags & 0x8000)) return; // not a response
       const all = [...msg.answers, ...msg.additionals];
-      const srv = all.find((r) => r.type === mdns.TYPE.SRV && r.name.toLowerCase() === instance.toLowerCase());
-      if (!srv) return;
+      // exact name, or any iTunes_Ctrl_<id> whose id matches ignoring leading zeros
+      const srv = all.find((r) => {
+        if (r.type !== mdns.TYPE.SRV) return false;
+        if (r.name.toLowerCase() === instance.toLowerCase()) return true;
+        const m = INSTANCE_RE.exec(r.name);
+        return !!m && sameDacpId(m[1], dacpId);
+      });
+      if (!srv) {
+        // a PTR answer from the browse question: ask for that instance's SRV directly
+        const ptr = all.find((r) => r.type === mdns.TYPE.PTR && INSTANCE_RE.test(r.data) && sameDacpId(INSTANCE_RE.exec(r.data)[1], dacpId));
+        if (ptr && !asked.has(ptr.data)) {
+          asked.add(ptr.data);
+          const q2 = mdns.buildQuery([{ name: ptr.data, type: mdns.TYPE.SRV, unicastResponse: true }], id);
+          sock.send(q2, mdnsPort, rinfo.address, () => {});
+        }
+        return;
+      }
       const a = all.find((r) => r.type === mdns.TYPE.A && r.name.toLowerCase() === srv.data.target.toLowerCase());
       finish(null, { host: a ? a.data : rinfo.address, port: srv.data.port, target: srv.data.target });
     });
@@ -52,6 +86,8 @@ function resolveDacpService(dacpId, { clientIp, mdnsPort = 5353, timeoutMs = 150
     sock.bind(0, () => {
       const q = mdns.buildQuery([
         { name: instance, type: mdns.TYPE.SRV, unicastResponse: true },
+        // fallback: browse all DACP remotes, in case the id format differs
+        { name: '_dacp._tcp.local', type: mdns.TYPE.PTR, unicastResponse: true },
       ], id);
       if (clientIp && !clientIp.includes(':')) {
         sock.send(q, mdnsPort, clientIp, () => {});
@@ -109,6 +145,7 @@ class DacpRemote {
     if (this.endpoint && !force) return this.endpoint;
     if (!this.resolving || force) {
       const { dacpId, clientIp } = this.session;
+      this.log(`resolving iTunes_Ctrl_${dacpInstanceId(dacpId)} (client ${clientIp || 'unknown'})`);
       this.resolving = (async () => {
         let lastErr;
         for (let attempt = 0; attempt < 3; attempt++) {
@@ -160,4 +197,4 @@ class DacpRemote {
   }
 }
 
-module.exports = { DacpRemote, resolveDacpService, COMMANDS };
+module.exports = { DacpRemote, resolveDacpService, dacpInstanceId, sameDacpId, COMMANDS };

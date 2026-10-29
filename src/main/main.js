@@ -252,6 +252,7 @@ async function command(name) {
     return await remote.send(dacpCmd);
   } catch (e) {
     log(`command ${name} failed: ${e.message}`);
+    session.revertOptimistic();
     send('remote-error', name);
     return false;
   }
