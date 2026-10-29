@@ -1,0 +1,85 @@
+name: Build Windows installer
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # to attach the installer to a GitHub Release on tags
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Unit tests (mDNS, DACP remote, parsers, session, settings)
+        run: node --test tests/*.test.js
+
+  windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up MSYS2 (UCRT64) with GStreamer
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          path-type: inherit
+          install: >-
+            git
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-openssl
+            mingw-w64-ucrt-x86_64-libplist
+            mingw-w64-ucrt-x86_64-gstreamer
+            mingw-w64-ucrt-x86_64-gst-plugins-base
+            mingw-w64-ucrt-x86_64-gst-plugins-good
+            mingw-w64-ucrt-x86_64-gst-plugins-bad
+            mingw-w64-ucrt-x86_64-gst-libav
+
+      - name: Build UxPlay (AirPlay core)
+        shell: msys2 {0}
+        run: bash scripts/build-uxplay.sh .uxplay-build
+
+      - name: Bundle engine (uxplay.exe + GStreamer runtime)
+        shell: msys2 {0}
+        run: bash scripts/bundle-engine.sh .uxplay-build/UxPlay/build/uxplay.exe engine
+
+      - name: Verify bundled engine in isolation
+        shell: msys2 {0}
+        run: bash scripts/verify-engine.sh engine
+
+      - name: Install app dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build installer
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'   # no code-signing certificate
+        run: npm run dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FlickAirPlay-Setup
+          path: dist/*.exe
+          if-no-files-found: error
+
+      - name: Publish release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.exe
+          generate_release_notes: true

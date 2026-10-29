@@ -1,0 +1,132 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'">
+<title>Flick AirPlay</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  body { overflow-y: auto; user-select: text; background: var(--bg); }
+  main { max-width: 560px; margin: 0 auto; padding: 26px 24px 96px; }
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+  header .logo { width: 44px; height: 44px; padding: 8px; border-radius: 12px; color: #fff; background: linear-gradient(140deg, #8a63ff, #5a3fd6); }
+  header h1 { margin: 0; font: 600 20px/1.2 var(--font-display); }
+  header .ver { font-size: 12px; color: var(--faint); }
+
+  .status {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 14px 16px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line);
+    margin-bottom: 22px;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex: none; background: var(--faint); }
+  .dot.running { background: #4cd38a; box-shadow: 0 0 0 4px rgba(76,211,138,.15); }
+  .dot.starting, .dot.restarting { background: #f5c451; }
+  .dot.error { background: var(--danger); }
+  .status .txt { flex: 1; min-width: 0; }
+  .status .label { font-size: 12px; color: var(--faint); }
+  .status .val { font-size: 14px; margin-top: 2px; word-break: break-word; }
+  .status .warn { margin-top: 8px; font-size: 12.5px; color: #f5c451; line-height: 1.4; }
+  .status .btns { display: flex; gap: 6px; flex: none; }
+
+  h2 { margin: 26px 0 8px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+  .group { border-radius: 12px; background: var(--surface); border: 1px solid var(--line); overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 16px; padding: 13px 16px; min-height: 52px; }
+  .row + .row { border-top: 1px solid var(--line); }
+  .row .lbl { flex: 1; min-width: 0; font-size: 14px; line-height: 1.35; }
+  .row .lbl small { display: block; margin-top: 2px; font-size: 12px; color: var(--faint); }
+  .row.stack { flex-direction: column; align-items: stretch; gap: 8px; }
+
+  input[type=text], select {
+    font: inherit; font-size: 14px; color: var(--text);
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px;
+    padding: 9px 11px; outline: none; min-width: 0;
+  }
+  input[type=text]:focus, select:focus { border-color: var(--accent); }
+  select { max-width: 260px; }
+
+  .switch { position: relative; width: 42px; height: 24px; flex: none; }
+  .switch input { opacity: 0; position: absolute; inset: 0; margin: 0; cursor: pointer; }
+  .switch span { position: absolute; inset: 0; border-radius: 999px; background: #3a3a44; transition: background 160ms; pointer-events: none; }
+  .switch span::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform 160ms; }
+  .switch input:checked + span { background: var(--accent); }
+  .switch input:checked + span::after { transform: translateX(18px); }
+  .switch input:focus-visible + span { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+
+  .btn { padding: 8px 14px; border-radius: 8px; font-size: 13px; background: var(--surface-2); border: 1px solid var(--line); }
+  .btn:hover { background: #30303a; }
+  .btn.primary { background: var(--accent); border-color: transparent; color: #fff; font-weight: 600; }
+  .btn.primary:hover { background: #8a68f5; }
+
+  footer {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    display: flex; justify-content: flex-end; align-items: center; gap: 12px;
+    padding: 14px 24px; background: rgba(18,18,22,.92); border-top: 1px solid var(--line);
+    backdrop-filter: blur(10px);
+  }
+  footer .saved { font-size: 13px; color: #4cd38a; opacity: 0; transition: opacity 300ms; }
+  footer .saved.show { opacity: 1; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="logo" id="logo"></div>
+    <div><h1>Flick AirPlay</h1><div class="ver" id="ver"></div></div>
+  </header>
+
+  <div class="status">
+    <div class="dot" id="dot"></div>
+    <div class="txt">
+      <div class="label" id="lStatus"></div>
+      <div class="val" id="statusVal"></div>
+      <div class="warn" id="warn" hidden></div>
+    </div>
+    <div class="btns">
+      <button class="btn" id="restart"></button>
+      <button class="btn" id="logs"></button>
+    </div>
+  </div>
+
+  <h2 id="hGeneral"></h2>
+  <div class="group">
+    <div class="row stack">
+      <label class="lbl" for="deviceName"><span id="lName"></span><small id="lNameHint"></small></label>
+      <input type="text" id="deviceName" maxlength="48" spellcheck="false">
+    </div>
+    <div class="row"><div class="lbl" id="lLang"></div>
+      <select id="language"><option value="auto" id="oLangAuto"></option><option value="uk">Українська</option><option value="ru">Русский</option><option value="en">English</option></select>
+    </div>
+    <div class="row"><div class="lbl" id="lAutostart"></div><label class="switch"><input type="checkbox" id="autostart"><span></span></label></div>
+  </div>
+
+  <h2 id="hPlayer"></h2>
+  <div class="group">
+    <div class="row"><div class="lbl" id="lShowMini"></div><label class="switch"><input type="checkbox" id="showMiniOnPlay"><span></span></label></div>
+    <div class="row"><div class="lbl" id="lAutoFull"></div><label class="switch"><input type="checkbox" id="autoFullscreen"><span></span></label></div>
+    <div class="row"><div class="lbl" id="lDisplay"></div><select id="fullscreenDisplay"></select></div>
+    <div class="row"><div class="lbl" id="lOnTop"></div><label class="switch"><input type="checkbox" id="miniAlwaysOnTop"><span></span></label></div>
+    <div class="row"><div class="lbl" id="lMediaKeys"></div><label class="switch"><input type="checkbox" id="mediaKeys"><span></span></label></div>
+  </div>
+
+  <h2 id="hSound"></h2>
+  <div class="group">
+    <div class="row"><div class="lbl" id="lTaper"></div><label class="switch"><input type="checkbox" id="taperVolume"><span></span></label></div>
+    <div class="row"><div class="lbl" id="lSink"></div>
+      <select id="audioSink"><option value="auto" id="oSinkAuto"></option><option value="wasapi2sink">WASAPI 2</option><option value="wasapisink">WASAPI</option><option value="directsoundsink">DirectSound</option></select>
+    </div>
+  </div>
+
+  <h2 id="hConn"></h2>
+  <div class="group">
+    <div class="row"><div class="lbl" id="lTakeover"></div><label class="switch"><input type="checkbox" id="allowTakeover"><span></span></label></div>
+    <div class="row"><div class="lbl"><span id="lMirror"></span><small id="lMirrorHint"></small></div><label class="switch"><input type="checkbox" id="mirroring"><span></span></label></div>
+  </div>
+</main>
+<footer>
+  <span class="saved" id="saved"></span>
+  <button class="btn primary" id="save"></button>
+</footer>
+<script src="common.js"></script>
+<script src="settings.js"></script>
+</body>
+</html>

@@ -5,7 +5,7 @@
   "description": "AirPlay receiver for Windows: stream music from iPhone/iPad to your PC",
   "author": "Serhii Volkov (@sergvo1kov)",
   "license": "GPL-3.0-or-later",
-  "homepage": "https://github.com/sergvo1kov/flick-airplay-pc",
+  "homepage": "https://github.com/sergvo1kov/flick-pc-airplay",
   "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",
