@@ -50,14 +50,14 @@ done
 echo "--- HTTPS fetch"
 https_ok=0
 for try in 1 2; do
-  out=$(timeout 30 gst-launch-1.0.exe -q souphttpsrc location=https://www.google.com/ num-buffers=2 ! fakesink 2>&1); rc=$?
+  out=$(/usr/bin/timeout 30 gst-launch-1.0.exe -q souphttpsrc location=https://www.google.com/ num-buffers=2 ! fakesink 2>&1); rc=$?
   if [ $rc = 0 ]; then https_ok=1; break; fi
 done
 if [ $https_ok = 1 ]; then note "ok   HTTPS (TLS) download works"; else note "FAIL HTTPS download: $(echo "$out" | tr -d '\r' | grep -i -m2 -E 'error|tls|certif' | tr '\n' ' ')"; fail=1; fi
 
 echo "--- HLS playback (playbin3, 12 s)"
 hls_try() {
-  out=$(timeout 12 gst-launch-1.0.exe playbin3 uri="$1" video-sink=fakesink audio-sink=fakesink 2>&1); rc=$?
+  out=$(/usr/bin/timeout 12 gst-launch-1.0.exe playbin3 uri="$1" video-sink=fakesink audio-sink=fakesink 2>&1); rc=$?
   # 124 = still playing when the timeout hit (good); errors end it early
   if [ $rc = 124 ] && ! echo "$out" | grep -q "ERROR"; then return 0; fi
   echo "$out" | tr -d '\r' | grep -m3 -E "ERROR|Additional debug|missing" | tr '\n' ' '
