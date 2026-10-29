@@ -1,0 +1,55 @@
+{
+  "name": "flick-airplay-pc",
+  "productName": "Flick AirPlay",
+  "version": "0.1.0",
+  "description": "AirPlay receiver for Windows: stream music from iPhone/iPad to your PC",
+  "author": "Serhii Volkov (@sergvo1kov)",
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://github.com/sergvo1kov/flick-airplay-pc",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test tests/*.test.js",
+    "dist": "electron-builder --win nsis --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.sergvo1kov.flickairplay",
+    "productName": "Flick AirPlay",
+    "copyright": "Serhii Volkov",
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      { "from": "engine", "to": "engine" },
+      { "from": "LICENSE", "to": "LICENSE.txt" },
+      { "from": "THIRD_PARTY.md", "to": "THIRD_PARTY.md" }
+    ],
+    "asar": true,
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "build/icon.ico",
+      "executableName": "FlickAirPlay"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Flick AirPlay",
+      "runAfterFinish": true,
+      "include": "build/installer.nsh",
+      "artifactName": "FlickAirPlay-Setup-${version}.exe",
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}
