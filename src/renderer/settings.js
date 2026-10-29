@@ -44,8 +44,9 @@ const STATE_KEYS = { starting: 'stStarting', running: 'stRunning', restarting: '
   function showEngine(e) {
     $('dot').className = `dot ${e.state}`;
     $('statusVal').textContent = fmt(T[STATE_KEYS[e.state]] || e.state, { error: e.error || '?' });
-    $('warn').hidden = !e.networkWarning;
-    $('warn').textContent = e.networkWarning || '';
+    const warns = [e.videoFallback ? T.videoFallback : '', e.networkWarning || ''].filter(Boolean);
+    $('warn').hidden = !warns.length;
+    $('warn').textContent = warns.join('\n\n');
   }
   showEngine(init.engine);
   window.flick.onEngine(showEngine);

@@ -146,6 +146,7 @@ class Engine extends EventEmitter {
     this.crashes = this.crashes.filter((t) => now - t < 60_000);
     this.crashes.push(now);
     this.log(`uxplay exited (code ${code}, signal ${signal})`);
+    this.emit('crash', { code, count: this.crashes.length, settings: this.settings });
     if (this.crashes.length > 5) {
       this._setState('error', this.lastError || `AirPlay engine keeps crashing (exit code ${code})`);
       return;

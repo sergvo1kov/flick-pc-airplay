@@ -97,6 +97,29 @@ else
 fi
 echo "--- uxplay output"
 cat "$RT/out.log"
+
+# Same, with EXACTLY the startup file the app writes for a fresh install
+# (default settings: video on = d3d11 window + YouTube HLS + full screen).
+echo "--- 10 s run with the app's default configuration"
+RT2="$(mktemp -d)"
+if [ -n "$NODE_BIN" ]; then
+  "$NODE_BIN" -e "const p=require('path');const r=p.join(process.argv[1],'..','src','main');const {buildRc}=require(p.join(r,'engine.js'));const {sanitize}=require(p.join(r,'settings.js'));process.stdout.write(buildRc(sanitize({deviceName:'Flick CI Default'})))" "$(cygpath -w "$SCRIPTS")" > "$RT2/uxplay.rc"
+  echo "d" >> "$RT2/uxplay.rc"     # debug log, so a failure says why
+  cat "$RT2/uxplay.rc"
+  ( cd "$RT2" && exec uxplay.exe -rc uxplay.rc ) > "$RT2/out.log" 2>&1 &
+  pid2=$!
+  sleep 10
+  if kill -0 "$pid2" 2>/dev/null; then
+    note "ok   default app config (video+hls+fs) runs 10 s"
+    kill "$pid2" 2>/dev/null; sleep 1; kill -9 "$pid2" 2>/dev/null
+  else
+    wait "$pid2"; note "FAIL default app config exited (code $?)"; fail=1
+  fi
+  OUT2=$(grep -v -E "^raop_rtp|audio progress" "$RT2/out.log" | tr -d '\r' | grep -i -E -B2 -A6 "error|assert|critical|fail|launch string|pipeline" | tail -n 45 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+  echo "::notice title=default-config uxplay log (errors)::$OUT2"
+else
+  note "--   node not found, default-config run skipped"
+fi
 grep -q "Flick CI Тест" "$RT/out.log" && note "ok   UTF-8 device name read from rc file" || note "note: device name not echoed in log"
 
 # Surface results as job annotations (readable via the API without raw logs).
