@@ -127,11 +127,12 @@ function pulse(btn) {
 
 /** Wires keyboard shortcuts shared by mini and full players. */
 function bindKeys(extra = {}) {
+  // media keys are handled globally by the main process (no double toggle when focused)
   window.addEventListener('keydown', (e) => {
     if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
-    if (e.code === 'Space' || e.code === 'MediaPlayPause') { e.preventDefault(); window.flick.command('playpause'); }
-    else if (e.code === 'ArrowRight' || e.code === 'MediaTrackNext') window.flick.command('next');
-    else if (e.code === 'ArrowLeft' || e.code === 'MediaTrackPrevious') window.flick.command('prev');
+    if (e.code === 'Space') { e.preventDefault(); window.flick.command('playpause'); }
+    else if (e.code === 'ArrowRight') window.flick.command('next');
+    else if (e.code === 'ArrowLeft') window.flick.command('prev');
     else if (e.code === 'ArrowUp') window.flick.command('volup');
     else if (e.code === 'ArrowDown') window.flick.command('voldown');
     else if (extra[e.code]) extra[e.code](e);
