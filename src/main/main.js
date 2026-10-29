@@ -56,6 +56,7 @@ let settingsWin = null;
 let lastStatus = 'idle';
 let quitting = false;
 let mediaKeysOn = false;
+let videoActive = false;     // UxPlay's own video window is showing (mirroring / YouTube)
 
 function t(key, vars) { return i18n.format(T[key] || key, vars); }
 function applyLanguage() {
@@ -275,7 +276,7 @@ session.onChange((s) => {
     log(`session: ${was} -> ${s.status}`);
     const nowActive = s.status === 'playing' || s.status === 'paused';
     if (was === 'idle' || was === 'connected') {
-      if (s.status === 'playing') {
+      if (s.status === 'playing' && !videoActive) {
         if (settings.autoFullscreen) openFull();
         else if (settings.showMiniOnPlay && !(fullWin && !fullWin.isDestroyed())) showMini();
       }
@@ -291,6 +292,18 @@ session.onChange((s) => {
 engine.on('line', (line) => {
   if (!/audio progress/.test(line)) log(`[uxplay] ${line}`);
   session.feedLine(line);
+  const ev = P.parseVideoEvent(line);
+  if (ev === 'start' && !videoActive) {
+    // UxPlay opens its own Direct3D video window: get our windows out of the way
+    videoActive = true;
+    log('video started (mirroring / AirPlay video)');
+    closeFull();
+    hideMini();
+  } else if (ev === 'stop' && videoActive) {
+    videoActive = false;
+    log('video stopped');
+    if ((session.status === 'playing' || session.status === 'paused') && settings.showMiniOnPlay) showMini();
+  }
 });
 
 engine.on('files', async (f) => {
@@ -311,6 +324,7 @@ engine.on('files', async (f) => {
 });
 
 engine.on('state', (st) => {
+  if (st.state !== 'running') videoActive = false;
   engineState = st;
   log(`engine state: ${st.state}${st.error ? ` (${st.error})` : ''}`);
   send('engine', engineStatus());

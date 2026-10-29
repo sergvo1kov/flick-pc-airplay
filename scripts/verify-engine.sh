@@ -15,6 +15,7 @@ export GST_PLUGIN_SYSTEM_PATH_1_0="$WIN_ENGINE\\lib\\gstreamer-1.0"
 export GST_PLUGIN_SCANNER_1_0="$WIN_ENGINE\\libexec\\gstreamer-1.0\\gst-plugin-scanner.exe"
 REG_DIR="$(mktemp -d)"
 export GST_REGISTRY_1_0="$(cygpath -w "$REG_DIR")\\registry.bin"
+export GIO_MODULE_DIR="$WIN_ENGINE\\lib\\gio\\modules"
 unset GST_PLUGIN_PATH GST_PLUGIN_SYSTEM_PATH UXPLAYRC
 
 fail=0
@@ -22,7 +23,8 @@ REPORT=""
 note() { echo "$1"; REPORT="$REPORT$1%0A"; }
 # Elements UxPlay builds its audio (ALAC/AAC) and mirroring (H.264) pipelines from.
 for el in appsrc queue volume level audioconvert audioresample avdec_alac avdec_aac aacparse autoaudiosink \
-          fakesink h264parse h265parse avdec_h264 videoflip videoconvert videoscale rtph264pay decodebin playbin; do
+          fakesink h264parse h265parse avdec_h264 videoflip videoconvert videoscale rtph264pay decodebin playbin \
+          playbin3 souphttpsrc hlsdemux2 tsdemux qtdemux; do
   if gst-inspect-1.0.exe "$el" >/dev/null 2>&1; then
     note "ok   $el"
   else
@@ -41,6 +43,29 @@ for pl in wasapi2 d3d11; do
 done
 for el in wasapi2sink d3d11videosink d3d12videosink d3d11h264dec jpegdec mp4mux imagefreeze textoverlay; do
   gst-inspect-1.0.exe "$el" >/dev/null 2>&1 && note "ok   $el (optional)" || note "--   $el (optional/hardware, absent here)"
+done
+
+# YouTube over AirPlay = HLS fetched over HTTPS by GStreamer. Prove the bundle can
+# do TLS and actually play a real HLS stream (H.264 + AAC) on its own.
+echo "--- HTTPS fetch"
+https_ok=0
+for try in 1 2; do
+  out=$(timeout 30 gst-launch-1.0.exe -q souphttpsrc location=https://www.google.com/ num-buffers=2 ! fakesink 2>&1); rc=$?
+  if [ $rc = 0 ]; then https_ok=1; break; fi
+done
+if [ $https_ok = 1 ]; then note "ok   HTTPS (TLS) download works"; else note "FAIL HTTPS download: $(echo "$out" | tr -d '\r' | grep -i -m2 -E 'error|tls|certif' | tr '\n' ' ')"; fail=1; fi
+
+echo "--- HLS playback (playbin3, 12 s)"
+hls_try() {
+  out=$(timeout 12 gst-launch-1.0.exe playbin3 uri="$1" video-sink=fakesink audio-sink=fakesink 2>&1); rc=$?
+  # 124 = still playing when the timeout hit (good); errors end it early
+  if [ $rc = 124 ] && ! echo "$out" | grep -q "ERROR"; then return 0; fi
+  echo "$out" | tr -d '\r' | grep -m3 -E "ERROR|Additional debug|missing" | tr '\n' ' '
+  return 1
+}
+for url in https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8 \
+           https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8; do
+  if msg=$(hls_try "$url" || hls_try "$url"); then note "ok   HLS plays: $url"; else note "FAIL HLS $url: $msg"; fail=1; fi
 done
 
 echo "--- uxplay -h"

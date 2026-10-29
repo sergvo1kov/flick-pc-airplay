@@ -16,12 +16,14 @@ REQUIRED_PLUGINS=(
   autodetect level videofilter              # -good: autoaudiosink, level (audio pipeline), videoflip
   libav                                      # avdec_alac, avdec_aac, avdec_h264
   videoparsersbad wasapi2 d3d11              # -bad: h264parse, audio out, video out
+  soup adaptivedemux2 isomp4 audioparsers   # -good: HTTPS source, hlsdemux2, fMP4, aacparse (YouTube HLS)
+  mpegtsdemux                                # -bad: tsdemux (HLS .ts segments)
 )
 OPTIONAL_PLUGINS=(
   videoconvertscale videoconvert videoscale videorate audiorate rawparse  # -base (names vary by version)
-  directsound jpeg isomp4 audioparsers rtp rtpmanager imagefreeze         # -good
+  directsound jpeg rtp rtpmanager imagefreeze                             # -good
   pango                                                                    # -base: textoverlay (cover-art window mode only)
-  wasapi d3d12 mediafoundation dxva                                       # -bad
+  wasapi d3d12 mediafoundation dxva hls dash                              # -bad
 )
 
 rm -rf "$OUT"
@@ -31,6 +33,13 @@ cp "$UXPLAY_EXE" "$OUT/bin/uxplay.exe"
 # diagnostics tools (tiny, handy for support)
 cp "$PREFIX/bin/gst-inspect-1.0.exe" "$PREFIX/bin/gst-launch-1.0.exe" "$OUT/bin/"
 cp "$PREFIX/libexec/gstreamer-1.0/gst-plugin-scanner.exe" "$OUT/libexec/gstreamer-1.0/"
+
+# The soup plugin loads libsoup at runtime (not visible to ldd), and HTTPS needs
+# glib-networking's TLS module (loaded by GIO from GIO_MODULE_DIR).
+cp "$PREFIX"/bin/libsoup-3.0-*.dll "$OUT/bin/"
+mkdir -p "$OUT/lib/gio/modules"
+cp "$PREFIX"/lib/gio/modules/*.dll "$OUT/lib/gio/modules/"
+ls "$OUT/lib/gio/modules"
 
 missing=0
 for p in "${REQUIRED_PLUGINS[@]}"; do

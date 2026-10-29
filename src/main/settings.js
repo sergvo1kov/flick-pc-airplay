@@ -13,12 +13,13 @@ const DEFAULTS = Object.freeze({
   mediaKeys: true,             // keyboard media keys control the iPhone while connected
   taperVolume: true,           // AirPlay volume curve like Apple speakers
   allowTakeover: true,         // another device may take over (like Apple TV)
-  mirroring: false,            // experimental screen mirroring
+  video: true,                 // screen mirroring + YouTube (AirPlay HLS video)
+  videoFullscreen: true,       // video window opens full screen (Alt+Enter toggles)
   audioSink: 'auto',
 });
 
 // Settings that require restarting the AirPlay engine when changed.
-const ENGINE_KEYS = ['deviceName', 'taperVolume', 'allowTakeover', 'mirroring', 'audioSink'];
+const ENGINE_KEYS = ['deviceName', 'taperVolume', 'allowTakeover', 'video', 'videoFullscreen', 'audioSink'];
 
 function sanitize(input) {
   const s = { ...DEFAULTS };

@@ -246,9 +246,20 @@ test('engine: rc file keeps a Cyrillic name intact and uses relative paths', () 
   assert.match(rc, /^taper$/m);
   assert.match(rc, /^nohold$/m);
   assert.doesNotMatch(rc, /^as /m);
-  const mirror = buildRc({ deviceName: 'x', mirroring: true, audioSink: 'wasapi2sink' });
-  assert.match(mirror, /^vs d3d11videosink$/m);
-  assert.match(mirror, /^as wasapi2sink$/m);
+  const video = buildRc({ deviceName: 'x', video: true, videoFullscreen: true, audioSink: 'wasapi2sink' });
+  assert.match(video, /^vs d3d11videosink$/m);
+  assert.match(video, /^hls$/m);
+  assert.match(video, /^fs$/m);
+  assert.match(video, /^as wasapi2sink$/m);
+  assert.doesNotMatch(buildRc({ deviceName: 'x', video: true, videoFullscreen: false }), /^fs$/m);
+});
+
+test('parsers: video start/stop markers from UxPlay', () => {
+  assert.equal(P.parseVideoEvent('raop_rtp_mirror starting mirroring'), 'start');
+  assert.equal(P.parseVideoEvent('********************on_video_play: location = http://localhost:7100/master.m3u8*** start position 0.0'), 'start');
+  assert.equal(P.parseVideoEvent('**************************on_video_stop'), 'stop');
+  assert.equal(P.parseVideoEvent(' video has finished, 212.3'), 'stop');
+  assert.equal(P.parseVideoEvent('audio progress (min:sec): 0:01; remaining: 1:00; track length 1:01'), null);
 });
 
 test('engine: line splitter handles \\r progress redraws and split chunks', () => {
@@ -282,6 +293,8 @@ test('settings: sanitize and persist, engine change detection', () => {
   assert.equal(new SettingsStore(dir).get().deviceName, 'Мій ПК');
   assert.equal(sanitize({ language: 'xx', audioSink: 'evil' }).language, 'auto');
   assert.equal(sanitize({ autostart: 'yes' }).autostart, true); // wrong type -> default
+  assert.equal(sanitize({}).video, true);   // video on by default
+  assert.equal(sanitize({ mirroring: false }).video, true); // old v0.1 key is ignored
 });
 
 test('i18n: every language has every key', () => {

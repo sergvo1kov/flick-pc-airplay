@@ -27,9 +27,11 @@ function buildRc(settings) {
     `md ${FILES.meta}`,
     `dacp ${FILES.dacp}`,
   ];
-  if (settings.mirroring) {
-    lines.push(`vs ${settings.videoSink || 'd3d11videosink'}`);
-    if (settings.h265) lines.push('h265');
+  if (settings.video) {
+    // d3d11videosink without options gets UxPlay's Alt+Enter full-screen toggle
+    lines.push('vs d3d11videosink');
+    lines.push('hls');               // YouTube app: video comes straight from YouTube (HTTPS HLS)
+    if (settings.videoFullscreen) lines.push('fs');
   } else {
     lines.push('vs 0');
   }
@@ -53,6 +55,7 @@ function engineEnv(engineDir, runtimeDir, baseEnv = process.env) {
     GST_PLUGIN_SYSTEM_PATH_1_0: plugins,
     GST_PLUGIN_SCANNER_1_0: path.join(engineDir, 'libexec', 'gstreamer-1.0', 'gst-plugin-scanner.exe'),
     GST_REGISTRY_1_0: path.join(runtimeDir, 'gst-registry.bin'),
+    GIO_MODULE_DIR: path.join(engineDir, 'lib', 'gio', 'modules'),   // TLS for HTTPS (YouTube)
   };
 }
 

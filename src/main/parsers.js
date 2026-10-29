@@ -43,6 +43,16 @@ function parseConnection(line) {
   return m ? { deviceName: m[1], deviceModel: m[2], deviceId: m[3] } : null;
 }
 
+const VIDEO_START_RE = /raop_rtp_mirror starting mirroring|on_video_play: location/;
+const VIDEO_STOP_RE = /on_video_stop|video has finished|raop_rtp_mirror->running is no longer true|hls video has sent EOS/;
+
+/** 'start' | 'stop' | null — mirroring / AirPlay (YouTube) video begins or ends. */
+function parseVideoEvent(line) {
+  if (VIDEO_START_RE.test(line)) return 'start';
+  if (VIDEO_STOP_RE.test(line)) return 'stop';
+  return null;
+}
+
 /** -dacp file: "<DACP-ID>\n<Active-Remote>\n" */
 function parseDacpFile(text) {
   if (!text) return null;
@@ -99,5 +109,5 @@ function pickClientIp(peers) {
 }
 
 module.exports = {
-  parseMetadata, parseProgress, parseConnection, parseDacpFile, isRealCover, coverMime, parseNetstat, pickClientIp,
+  parseVideoEvent, parseMetadata, parseProgress, parseConnection, parseDacpFile, isRealCover, coverMime, parseNetstat, pickClientIp,
 };
