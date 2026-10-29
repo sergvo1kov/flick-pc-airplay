@@ -354,11 +354,16 @@ function engineStatus() {
   return { ...engineState, networkWarning, videoFallback };
 }
 
+/** Settings as the engine needs them: user settings + effective UI language. */
+function engineSettings() {
+  return { ...settings, uiLanguage: lang };
+}
+
 function restartEngine() {
   videoFallback = false;
   session.reset();
   session._emit();
-  return engine.restart(settings);
+  return engine.restart(engineSettings());
 }
 
 // ---------------------------------------------------------------- Windows checks
@@ -457,7 +462,7 @@ app.whenReady().then(async () => {
   setInterval(() => session.housekeeping(), 500);
   // keep progress bars moving in open windows without flooding IPC
   setInterval(() => { if (session.status === 'playing') send('state', session.snapshot()); }, 1000);
-  await engine.start(settings);
+  await engine.start(engineSettings());
   checkNetworkProfile();
 
   updater = new Updater({
