@@ -207,9 +207,10 @@ test('dacp: resolves via unicast mDNS and sends commands with Active-Remote', as
   await new Promise((r) => responder.bind(0, '127.0.0.1', r));
   responder.on('message', (buf, rinfo) => {
     const q = mdns.parseMessage(buf);
-    assert.equal(q.questions[0].name, 'iTunes_Ctrl_DEADBEEF._dacp._tcp.local');
+    // iOS advertises the zero-padded 16-digit id; ignore anything else
+    if (q.questions[0].name !== 'iTunes_Ctrl_00000000DEADBEEF._dacp._tcp.local') return;
     const resp = mdns.buildResponse(q.id, [
-      { name: 'iTunes_Ctrl_DEADBEEF._dacp._tcp.local', type: mdns.TYPE.SRV, data: { port: httpPort, target: 'Phone.local' } },
+      { name: 'iTunes_Ctrl_00000000DEADBEEF._dacp._tcp.local', type: mdns.TYPE.SRV, data: { port: httpPort, target: 'Phone.local' } },
       { name: 'Phone.local', type: mdns.TYPE.A, data: '127.0.0.1' },
     ]);
     responder.send(resp, rinfo.port, rinfo.address);
@@ -313,7 +314,7 @@ test('engine: crash event lets the app switch the next restart to audio-only', a
   fs.mkdirSync(binDir, { recursive: true });
   // fake uxplay.exe: dies like g_error/abort when the rc asks for video
   fs.writeFileSync(path.join(binDir, 'uxplay.exe'),
-    '#!/bin/sh\nif grep -q "^vs d3d11" "$2"; then exit 3; fi\necho "Initialized server socket(s)"\nsleep 30\n', { mode: 0o755 });
+    '#!/bin/sh\nif grep -q "^vs d3d11" "$2"; then exit 3; fi\necho "Initialized server socket(s)"\nexec sleep 30\n', { mode: 0o755 });
   const eng = new Engine({ engineDir: path.join(dir, 'engine'), runtimeDir: path.join(dir, 'rt') });
   let fallback = false;
   eng.on('crash', ({ count, settings: used }) => {
@@ -349,4 +350,70 @@ test('cli: --cmd for Stream Dock / shortcuts', () => {
   assert.equal(P.parseCliCommand(['app.exe', '--hidden']), null);
   assert.equal(P.parseCliCommand(['app.exe', '--cmd=rm']), null);
   assert.equal(P.parseCliCommand([]), null);
+});
+
+test('dacp: ids from iOS lose leading zeros; the mDNS name has all 16 digits (real ids from the field log)', () => {
+  const { dacpInstanceId, sameDacpId } = require('../src/main/dacp');
+  assert.equal(dacpInstanceId('BD2CD1D0834418'), '00BD2CD1D0834418');
+  assert.equal(dacpInstanceId('C77DF33C1BB4569'), '0C77DF33C1BB4569');
+  assert.equal(dacpInstanceId('8350F68714DD5744'), '8350F68714DD5744');
+  assert.equal(dacpInstanceId('8350f68714dd5744'), '8350F68714DD5744');
+  assert.ok(sameDacpId('00BD2CD1D0834418', 'BD2CD1D0834418'));
+  assert.ok(!sameDacpId('00BD2CD1D0834418', 'BD2CD1D0834419'));
+});
+
+test('dacp: phone advertising the zero-padded name is found from a short DACP-ID', async () => {
+  const hits = [];
+  const server = http.createServer((req, res) => { hits.push(req.url); res.statusCode = 204; res.end(); });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const responder = dgram.createSocket('udp4');
+  await new Promise((r) => responder.bind(0, '127.0.0.1', r));
+  const FULL = 'iTunes_Ctrl_00BD2CD1D0834418._dacp._tcp.local';
+  responder.on('message', (buf, rinfo) => {
+    const q = mdns.parseMessage(buf);
+    // like iOS: answer only for its exact (padded) instance name
+    if (!q.questions.some((x) => x.name === FULL)) return;
+    responder.send(mdns.buildResponse(q.id, [
+      { name: FULL, type: mdns.TYPE.SRV, data: { port: server.address().port, target: 'Phone.local' } },
+      { name: 'Phone.local', type: mdns.TYPE.A, data: '127.0.0.1' },
+    ]), rinfo.port, rinfo.address);
+  });
+  const remote = new DacpRemote({ mdnsPort: responder.address().port, multicast: false, resolveTimeoutMs: 800 });
+  remote.setSession({ dacpId: 'BD2CD1D0834418', activeRemote: '1', clientIp: '127.0.0.1' });
+  assert.equal(await remote.send('nextitem'), true);
+  assert.deepEqual(hits, ['/ctrl-int/1/nextitem']);
+  server.close(); responder.close();
+});
+
+test('dacp: browse fallback finds the remote when only PTR answers come back', async () => {
+  const hits = [];
+  const server = http.createServer((req, res) => { hits.push(req.url); res.statusCode = 204; res.end(); });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const responder = dgram.createSocket('udp4');
+  await new Promise((r) => responder.bind(0, '127.0.0.1', r));
+  const NAME = 'iTunes_Ctrl_0000ABCDEF123456._dacp._tcp.local';  // different padding than we expect
+  responder.on('message', (buf, rinfo) => {
+    const q = mdns.parseMessage(buf);
+    const names = q.questions.map((x) => x.name);
+    let recs = [];
+    if (names.includes('_dacp._tcp.local')) recs = [{ name: '_dacp._tcp.local', type: mdns.TYPE.PTR, data: NAME }];
+    if (names.includes(NAME)) recs = [{ name: NAME, type: mdns.TYPE.SRV, data: { port: server.address().port, target: 'P.local' } }];
+    if (recs.length) responder.send(mdns.buildResponse(q.id, recs), rinfo.port, rinfo.address);
+  });
+  const remote = new DacpRemote({ mdnsPort: responder.address().port, multicast: false, resolveTimeoutMs: 800 });
+  remote.setSession({ dacpId: 'ABCDEF123456', activeRemote: '1', clientIp: '127.0.0.1' });
+  assert.equal(await remote.send('playpause'), true);
+  assert.deepEqual(hits, ['/ctrl-int/1/playpause']);
+  server.close(); responder.close();
+});
+
+test('session: failed command reverts the optimistic pause', () => {
+  const c = clock();
+  const s = new Session({ now: c.now });
+  s.setDacp({ dacpId: 'X', activeRemote: '1' });
+  s.feedLine(PROG(30, 200));
+  s.optimisticToggle();
+  assert.equal(s.status, 'paused');
+  s.revertOptimistic();
+  assert.equal(s.status, 'playing');
 });

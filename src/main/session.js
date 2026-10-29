@@ -142,6 +142,16 @@ class Session {
     this._emit();
   }
 
+  /** The command never reached the phone: drop the optimistic state we showed. */
+  revertOptimistic() {
+    if (!this.optimistic) return;
+    this.optimistic = null;
+    const ticking = this.lastTickAt && this.now() - this.lastTickAt < PAUSE_DETECT_MS;
+    this.paused = this.streamSeen && !ticking;
+    this.pausedSince = this.paused ? this.now() : 0;
+    this._emit();
+  }
+
   /** Called periodically (e.g. every 500 ms). */
   housekeeping() {
     const t = this.now();
