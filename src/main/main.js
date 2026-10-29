@@ -58,6 +58,7 @@ let lastStatus = 'idle';
 let quitting = false;
 let mediaKeysOn = false;
 let videoActive = false;     // UxPlay's own video window is showing (mirroring / YouTube)
+let videoFallback = false;  // engine crashed with video on: running audio-only
 let updater = null;          // created in whenReady (needs the packaged app)
 let updateNotified = '';
 
@@ -329,6 +330,18 @@ engine.on('files', async (f) => {
   }
 });
 
+// Safety net: if the engine keeps crashing with video enabled (driver, codec or
+// plugin problem on this PC), fall back to audio-only so music keeps working.
+engine.on('crash', ({ code, count, settings: used }) => {
+  if (used && used.video && !videoFallback && count >= 2) {
+    videoFallback = true;
+    log(`engine crashed ${count}x with video on (exit ${code}); restarting audio-only`);
+    send('engine', engineStatus());
+    // the engine restarts itself after a crash, with engine.settings
+    engine.settings = { ...engine.settings, video: false };
+  }
+});
+
 engine.on('state', (st) => {
   if (st.state !== 'running') videoActive = false;
   engineState = st;
@@ -338,10 +351,11 @@ engine.on('state', (st) => {
 });
 
 function engineStatus() {
-  return { ...engineState, networkWarning };
+  return { ...engineState, networkWarning, videoFallback };
 }
 
 function restartEngine() {
+  videoFallback = false;
   session.reset();
   session._emit();
   return engine.restart(settings);

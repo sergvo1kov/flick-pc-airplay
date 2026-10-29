@@ -305,3 +305,25 @@ test('i18n: every language has every key', () => {
   assert.equal(i18n.pickLanguage('auto', 'de-DE'), 'en');
   assert.equal(i18n.pickLanguage('ru', 'uk-UA'), 'ru');
 });
+
+test('engine: crash event lets the app switch the next restart to audio-only', async () => {
+  const { Engine } = require('../src/main/engine');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'eng-'));
+  const binDir = path.join(dir, 'engine', 'bin');
+  fs.mkdirSync(binDir, { recursive: true });
+  // fake uxplay.exe: dies like g_error/abort when the rc asks for video
+  fs.writeFileSync(path.join(binDir, 'uxplay.exe'),
+    '#!/bin/sh\nif grep -q "^vs d3d11" "$2"; then exit 3; fi\necho "Initialized server socket(s)"\nsleep 30\n', { mode: 0o755 });
+  const eng = new Engine({ engineDir: path.join(dir, 'engine'), runtimeDir: path.join(dir, 'rt') });
+  let fallback = false;
+  eng.on('crash', ({ count, settings: used }) => {
+    if (used.video && !fallback && count >= 2) { fallback = true; eng.settings = { ...eng.settings, video: false }; }
+  });
+  await eng.start({ deviceName: 'x', video: true });
+  const deadline = Date.now() + 8000;
+  while (Date.now() < deadline && !(fallback && eng.state === 'running' && eng.proc)) await new Promise((r) => setTimeout(r, 100));
+  assert.equal(fallback, true);
+  assert.equal(eng.state, 'running');
+  assert.match(fs.readFileSync(path.join(dir, 'rt', 'uxplay.rc'), 'utf8'), /^vs 0$/m);
+  await eng.stop();
+});
