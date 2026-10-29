@@ -16,6 +16,7 @@ const DEFAULTS = Object.freeze({
   video: true,                 // screen mirroring + YouTube (AirPlay HLS video)
   videoFullscreen: true,       // video window opens full screen (Alt+Enter toggles)
   audioSink: 'auto',
+  autoUpdate: true,            // install downloaded updates when the app quits
 });
 
 // Settings that require restarting the AirPlay engine when changed.

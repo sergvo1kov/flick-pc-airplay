@@ -3,12 +3,13 @@
 const { ICONS, fmt } = window.FlickUI;
 const $ = (id) => document.getElementById(id);
 
-const TOGGLES = ['autostart', 'showMiniOnPlay', 'autoFullscreen', 'miniAlwaysOnTop', 'mediaKeys', 'taperVolume', 'allowTakeover', 'video', 'videoFullscreen'];
+const TOGGLES = ['autostart', 'showMiniOnPlay', 'autoFullscreen', 'miniAlwaysOnTop', 'mediaKeys', 'taperVolume', 'allowTakeover', 'video', 'videoFullscreen', 'autoUpdate'];
 const LABELS = {
   hGeneral: 'sGeneral', lName: 'sDeviceName', lNameHint: 'sDeviceNameHint', lLang: 'sLanguage', oLangAuto: 'sLangAuto',
   lAutostart: 'sAutostart', hPlayer: 'sPlayer', lShowMini: 'sShowMini', lAutoFull: 'sAutoFull', lDisplay: 'sFullDisplay',
   lOnTop: 'sOnTop', lMediaKeys: 'sMediaKeys', hSound: 'sSound', lTaper: 'sTaper', lSink: 'sAudioSink', oSinkAuto: 'sAudioAuto',
   hConn: 'sConnection', lTakeover: 'sTakeover', lVideo: 'sVideo', lVideoHint: 'sVideoHint', lVideoFull: 'sVideoFull', lStatus: 'sStatus',
+  hUpdates: 'sUpdates', lAutoUpdate: 'sAutoUpdate', upCheck: 'upCheck', upInstall: 'upInstall',
   restart: 'sRestart', logs: 'sLogs', save: 'sSave', saved: 'sSaved',
 };
 const STATE_KEYS = { starting: 'stStarting', running: 'stRunning', restarting: 'stRestarting', error: 'stError', stopped: 'stStopped' };
@@ -52,6 +53,34 @@ const STATE_KEYS = { starting: 'stStarting', running: 'stRunning', restarting: '
     const fresh = await window.flick.init();
     fillDisplays(fresh.displays, $('fullscreenDisplay').value);
   });
+
+  // ---- updates
+  function showUpdate(u) {
+    $('upVersion').textContent = fmt(T.sVersionLine, { v: u.current || init.version });
+    const st = $('upStatus');
+    st.className = '';
+    const text = {
+      disabled: T.upDisabled,
+      idle: T.upIdle,
+      checking: T.upChecking,
+      uptodate: T.upLatest,
+      downloading: fmt(T.upDownloading, { v: u.version, p: u.percent || 0 }),
+      downloaded: fmt(T.upReady, { v: u.version }),
+      error: fmt(T.upError, { error: u.error }),
+    }[u.status] || '';
+    st.textContent = text;
+    if (u.status === 'error') st.className = 'err';
+    if (u.status === 'downloaded') st.className = 'ready';
+    $('upBar').hidden = u.status !== 'downloading';
+    $('upFill').style.width = `${u.percent || 0}%`;
+    $('upCheck').hidden = u.status === 'downloaded';
+    $('upCheck').disabled = ['disabled', 'checking', 'downloading'].includes(u.status);
+    $('upInstall').hidden = u.status !== 'downloaded';
+  }
+  showUpdate(init.update);
+  window.flick.onUpdate(showUpdate);
+  $('upCheck').onclick = () => window.flick.checkUpdate();
+  $('upInstall').onclick = () => { $('upInstall').disabled = true; window.flick.installUpdate(); };
 
   $('restart').onclick = () => window.flick.restartEngine();
   $('logs').onclick = () => window.flick.openLogs();

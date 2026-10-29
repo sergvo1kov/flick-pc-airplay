@@ -12,6 +12,9 @@
     "test": "node --test tests/*.test.js",
     "dist": "electron-builder --win nsis --x64 --publish never"
   },
+  "dependencies": {
+    "electron-updater": "^6.3.0"
+  },
   "devDependencies": {
     "electron": "^38.0.0",
     "electron-builder": "^26.0.0"
@@ -29,13 +32,29 @@
       "package.json"
     ],
     "extraResources": [
-      { "from": "engine", "to": "engine" },
-      { "from": "LICENSE", "to": "LICENSE.txt" },
-      { "from": "THIRD_PARTY.md", "to": "THIRD_PARTY.md" }
+      {
+        "from": "engine",
+        "to": "engine"
+      },
+      {
+        "from": "LICENSE",
+        "to": "LICENSE.txt"
+      },
+      {
+        "from": "THIRD_PARTY.md",
+        "to": "THIRD_PARTY.md"
+      }
     ],
     "asar": true,
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "build/icon.ico",
       "executableName": "FlickAirPlay"
     },
@@ -50,6 +69,14 @@
       "include": "build/installer.nsh",
       "artifactName": "FlickAirPlay-Setup-${version}.exe",
       "deleteAppDataOnUninstall": false
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "sergvo1kov",
+        "repo": "flick-pc-airplay",
+        "releaseType": "release"
+      }
+    ]
   }
 }

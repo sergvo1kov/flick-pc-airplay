@@ -24,7 +24,7 @@ cover = 'data:image/jpeg;base64,' + base64.b64encode((ROOT / 'tests/ui/sample-co
 settings = {
     'deviceName': 'Flick PC', 'language': 'auto', 'autostart': True, 'showMiniOnPlay': True,
     'autoFullscreen': False, 'fullscreenDisplay': 'auto', 'miniAlwaysOnTop': True, 'mediaKeys': True,
-    'taperVolume': True, 'allowTakeover': True, 'mirroring': False, 'audioSink': 'auto',
+    'taperVolume': True, 'allowTakeover': True, 'video': True, 'videoFullscreen': True, 'audioSink': 'auto', 'autoUpdate': True,
 }
 
 def state(status, paused=False, title='Midnight City Lights', artist='Northern Echo', album='Late Drive'):
@@ -41,6 +41,7 @@ window.flick = {
   command: async () => true, saveSettings: async (p) => p, restartEngine: async () => {}, openLogs: async () => {},
   openFull(){}, closeFull(){}, openSettings(){}, hideMini(){},
   onState(){}, onCover(){}, onEngine(){}, onRemote(){}, onRemoteError(){}, onDisplaysChanged(){},
+  checkUpdate: async () => {}, installUpdate: async () => {}, onUpdate(){},
 };
 """
 
@@ -61,7 +62,8 @@ def shot(page_name, size, init, out_name, wait=900):
         else:
             print(out_name, 'ok')
 
-base = {'strings': strings, 'lang': LANG, 'settings': settings, 'version': '0.1.0',
+base = {'strings': strings, 'lang': LANG, 'settings': settings, 'version': '0.2.0',
+        'update': {'status': 'downloading', 'version': '0.2.1', 'percent': 63, 'current': '0.2.0', 'error': ''},
         'engine': {'state': 'running', 'error': '', 'networkWarning': ''},
         'displays': [{'id': '1', 'label': '1: 3440×1440 ★'}, {'id': '2', 'label': '2: 3840×2160'}], 'isFull': False}
 
@@ -71,5 +73,5 @@ shot('full.html', (1920, 1080), {**base, 'state': state('playing'), 'cover': cov
 shot('full.html', (1920, 1080), {**base, 'state': state('paused', paused=True), 'cover': cover}, 'full-paused.png', 1800)
 shot('full.html', (3440, 1440), {**base, 'state': state('playing', title='A Very Long Track Title That Should Wrap Onto Two Lines Nicely'), 'cover': cover}, 'full-ultrawide.png', 1800)
 shot('full.html', (1920, 1080), {**base, 'state': {'status': 'idle', 'position': 0, 'duration': 0}, 'cover': None}, 'full-idle.png')
-shot('settings.html', (600, 760), {**base, 'state': state('idle'), 'cover': None,
+shot('settings.html', (600, 1500), {**base, 'state': state('idle'), 'cover': None,
      'engine': {'state': 'running', 'error': '', 'networkWarning': strings['netPublic'].replace('{name}', 'Wi-Fi 5')}}, 'settings.png')
