@@ -11,6 +11,7 @@ const { DacpRemote } = require('./dacp');
 const { SettingsStore } = require('./settings');
 const P = require('./parsers');
 const i18n = require('./i18n');
+const { Updater, loadAutoUpdater } = require('./updater');
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -57,6 +58,8 @@ let lastStatus = 'idle';
 let quitting = false;
 let mediaKeysOn = false;
 let videoActive = false;     // UxPlay's own video window is showing (mirroring / YouTube)
+let updater = null;          // created in whenReady (needs the packaged app)
+let updateNotified = '';
 
 function t(key, vars) { return i18n.format(T[key] || key, vars); }
 function applyLanguage() {
@@ -201,6 +204,9 @@ function rebuildTrayMenu() {
     { label: T.menuNext, enabled: canControl, click: () => command('next') },
     { label: T.menuPrev, enabled: canControl, click: () => command('prev') },
     { type: 'separator' },
+    ...(updater && updater.readyToInstall
+      ? [{ label: t('menuInstallUpdate', { v: updater.state.version }), click: () => installUpdate() }]
+      : [{ label: T.menuCheckUpdates, enabled: !!updater && updater.state.status !== 'disabled', click: () => { updater.check(true); openSettings(); } }]),
     { label: T.menuSettings, click: () => openSettings() },
     { label: T.menuRestart, click: () => restartEngine() },
     { label: T.menuLogs, click: () => shell.openPath(logDir) },
@@ -377,6 +383,7 @@ ipcMain.handle('get-init', (e) => ({
     label: `${i + 1}: ${d.size.width}×${d.size.height}${d.id === screen.getPrimaryDisplay().id ? ' ★' : ''}`,
   })),
   version: app.getVersion(),
+  update: updater ? updater.snapshot() : { status: 'disabled', current: app.getVersion() },
   isFull: !!(fullWin && e.sender === fullWin.webContents),
 }));
 ipcMain.handle('command', (_e, name) => command(name));
@@ -386,6 +393,7 @@ ipcMain.handle('save-settings', async (_e, patch) => {
   settings = next;
   applyLanguage();
   applyAutostart();
+  if (updater) updater.setAutoInstall(settings.autoUpdate);
   if (miniWin && !miniWin.isDestroyed()) miniWin.setAlwaysOnTop(settings.miniAlwaysOnTop);
   updateMediaKeys(session.status !== 'idle');
   if (engineChanged) await restartEngine();
@@ -395,6 +403,17 @@ ipcMain.handle('save-settings', async (_e, patch) => {
 });
 ipcMain.handle('restart-engine', () => restartEngine());
 ipcMain.handle('open-logs', () => shell.openPath(logDir));
+ipcMain.handle('update-check', () => (updater ? updater.check(true) : null));
+ipcMain.handle('update-install', () => installUpdate());
+
+async function installUpdate() {
+  if (!updater || !updater.readyToInstall) return false;
+  log(`installing update ${updater.state.version}`);
+  quitting = true;                 // let the updater's app.quit() through
+  globalShortcut.unregisterAll();
+  await engine.stop();             // installer replaces uxplay.exe: it must not be running
+  return updater.install();
+}
 ipcMain.on('open-full', () => openFull());
 ipcMain.on('close-full', () => closeFull());
 ipcMain.on('open-settings', () => openSettings());
@@ -426,6 +445,23 @@ app.whenReady().then(async () => {
   setInterval(() => { if (session.status === 'playing') send('state', session.snapshot()); }, 1000);
   await engine.start(settings);
   checkNetworkProfile();
+
+  updater = new Updater({
+    autoUpdater: app.isPackaged ? loadAutoUpdater(log) : null,
+    enabled: app.isPackaged,
+    autoInstall: settings.autoUpdate,
+    currentVersion: app.getVersion(),
+    log,
+  });
+  updater.on('state', (st) => { send('update', st); rebuildTrayMenu(); });
+  updater.on('downloaded', (v) => {
+    if (updateNotified === v || !Notification.isSupported()) return;
+    updateNotified = v;
+    const n = new Notification({ title: t('notifyUpdateTitle', { v }), body: T.notifyUpdateBody, icon: path.join(ASSETS, 'icon.png') });
+    n.on('click', () => openSettings());
+    n.show();
+  });
+  updater.start();
   screen.on('display-added', () => send('displays-changed'));
   screen.on('display-removed', () => send('displays-changed'));
 
