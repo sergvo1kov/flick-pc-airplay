@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'">
+<title>Flick AirPlay</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  body {
+    background:
+      radial-gradient(120% 140% at 0% 0%, rgba(var(--tint), 0.95), rgba(var(--tint), 0.55) 45%, #121216 100%);
+    transition: background 800ms ease;
+    -webkit-app-region: drag;
+  }
+  .card {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    gap: 14px;
+    padding: 14px;
+  }
+  .cover { width: 132px; height: 132px; border-radius: 10px; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+  .side { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .top { display: flex; align-items: center; gap: 4px; height: 20px; }
+  .source { flex: 1; min-width: 0; font-size: 11px; color: var(--muted); letter-spacing: .01em; }
+  .source b { font-weight: 600; color: var(--text); opacity: .8; }
+  .win-btn { width: 22px; height: 22px; padding: 4px; color: var(--muted); }
+  .win-btn:hover { color: var(--text); }
+  .title { margin-top: 6px; font: 600 15px/1.25 var(--font-display); }
+  .artist { margin-top: 1px; font-size: 13px; color: var(--muted); }
+  .progress { margin-top: auto; padding-top: 8px; }
+  .times { margin-top: 4px; font-size: 10.5px; }
+  .controls { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 2px; }
+  .controls .ctrl { width: 30px; height: 30px; padding: 6px; }
+  .controls .ctrl.main { width: 36px; height: 36px; padding: 7px; }
+  .pill {
+    display: none;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    background: rgba(255,255,255,.14);
+    color: var(--text);
+  }
+  body.paused .pill { display: inline-block; }
+  body.paused .cover { filter: saturate(.75) brightness(.85); }
+  .cover { transition: filter 300ms ease; }
+  body.no-remote .controls .ctrl { opacity: .35; pointer-events: none; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="cover" id="cover"></div>
+    <div class="side">
+      <div class="top">
+        <div class="source ellipsis" id="source"></div>
+        <button class="win-btn" id="full" title=""></button>
+        <button class="win-btn" id="close" title=""></button>
+      </div>
+      <div class="title ellipsis" id="title"></div>
+      <div class="artist ellipsis" id="artist"></div>
+      <div class="progress">
+        <div class="bar"><i id="fill"></i></div>
+        <div class="times"><span id="pos">0:00</span><span id="dur">0:00</span></div>
+      </div>
+      <div class="controls">
+        <button class="ctrl" id="prev"></button>
+        <button class="ctrl main" id="play"></button>
+        <button class="ctrl" id="next"></button>
+      </div>
+    </div>
+  </div>
+<script src="common.js"></script>
+<script src="mini.js"></script>
+</body>
+</html>

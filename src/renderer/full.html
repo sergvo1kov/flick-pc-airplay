@@ -1,0 +1,146 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'">
+<title>Flick AirPlay</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  body { background: #08080b; }
+  body.hide-cursor, body.hide-cursor * { cursor: none !important; }
+
+  /* ---------- backdrop: blurred cover with slow Ken Burns drift ---------- */
+  .backdrop { position: fixed; inset: -8%; overflow: hidden; }
+  .backdrop img {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    filter: blur(70px) saturate(1.5) brightness(.55);
+    opacity: 0; transition: opacity 1400ms ease;
+    animation: drift 38s ease-in-out infinite alternate;
+  }
+  .backdrop img.on { opacity: 1; }
+  .backdrop .tint {
+    position: absolute; inset: 0;
+    background: radial-gradient(90% 90% at 30% 40%, rgba(var(--tint), .9), rgba(var(--tint), .35) 55%, #07070a 100%);
+    transition: background 1200ms ease;
+  }
+  body.has-art .backdrop .tint { background: radial-gradient(120% 100% at 50% 50%, transparent 30%, rgba(0,0,0,.55) 100%); }
+  @keyframes drift {
+    0% { transform: scale(1.08) translate(0, 0); }
+    50% { transform: scale(1.18) translate(-2%, 1.5%); }
+    100% { transform: scale(1.12) translate(2%, -1.5%); }
+  }
+
+  /* ---------- chrome ---------- */
+  .chrome {
+    position: fixed; left: 0; right: 0; top: 0;
+    display: flex; align-items: center; gap: 12px;
+    padding: 3.2vh 4vw 0;
+    color: rgba(255,255,255,.7);
+    font-size: clamp(13px, 1.9vh, 26px);
+    transition: opacity 500ms ease;
+  }
+  .chrome .glyph { width: 1.6em; height: 1.6em; opacity: .9; }
+  .chrome .spacer { flex: 1; }
+  .clock { font: 300 clamp(18px, 3.4vh, 48px)/1 var(--font-display); color: rgba(255,255,255,.85); font-variant-numeric: tabular-nums; }
+  .chrome button { width: 2.2em; height: 2.2em; padding: .45em; color: rgba(255,255,255,.7); }
+  .chrome button:hover { color: #fff; }
+  body.idle-ui .chrome button, body.idle-ui .controls { opacity: 0; pointer-events: none; }
+
+  /* ---------- now playing ---------- */
+  .stage {
+    position: fixed; inset: 0;
+    display: grid; grid-template-columns: auto minmax(0, 1fr);
+    align-items: center; gap: 5vw;
+    padding: 12vh 7vw 10vh;
+  }
+  .stage .cover {
+    width: min(58vh, 40vw); aspect-ratio: 1; border-radius: clamp(10px, 1.1vw, 22px);
+    box-shadow: 0 3vh 8vh rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.06);
+    transition: transform 700ms cubic-bezier(.2,.8,.2,1), filter 700ms ease;
+  }
+  body.paused .stage .cover { transform: scale(.9); filter: saturate(.8) brightness(.85); }
+  .info { min-width: 0; }
+  .source { font-size: clamp(13px, 1.2vw, 22px); color: rgba(255,255,255,.55); margin-bottom: 1.6vh; display: flex; align-items: center; gap: .6em; }
+  .pill { display: none; padding: .15em .7em; border-radius: 999px; background: rgba(255,255,255,.16); color: #fff; font-size: .85em; }
+  body.paused .pill { display: inline-block; }
+  .title {
+    font: 700 clamp(28px, 4.4vw, 92px)/1.08 var(--font-display);
+    letter-spacing: -.01em;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .artist { margin-top: 1.4vh; font: 500 clamp(18px, 2.2vw, 46px)/1.2 var(--font-display); color: rgba(255,255,255,.78); }
+  .album { margin-top: .6vh; font-size: clamp(14px, 1.5vw, 30px); color: rgba(255,255,255,.5); }
+  .progress { margin-top: 5vh; max-width: 900px; }
+  .progress .bar { height: clamp(4px, .5vh, 8px); }
+  .progress .times { font-size: clamp(12px, 1.1vw, 20px); margin-top: 1vh; color: rgba(255,255,255,.55); }
+  .controls { margin-top: 3.5vh; display: flex; align-items: center; gap: clamp(20px, 4vh, 64px); transition: opacity 500ms ease; }
+  .controls .ctrl { width: clamp(48px, 7vh, 96px); height: clamp(48px, 7vh, 96px); }
+  .controls .ctrl .icon { width: 58%; height: 58%; }
+  .controls .ctrl.main { width: clamp(64px, 10vh, 128px); height: clamp(64px, 10vh, 128px); background: rgba(255,255,255,.12); }
+  .controls .ctrl.main .icon { width: 46%; height: 46%; }
+  .note { margin-top: 2vh; font-size: clamp(12px, 1vw, 18px); color: rgba(255,255,255,.4); min-height: 1.4em; }
+
+  /* ---------- idle (waiting for a device) ---------- */
+  .idle {
+    position: fixed; inset: 0; display: none;
+    flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    gap: 2.5vh; padding: 0 10vw;
+  }
+  .idle .glyph { width: clamp(80px, 11vw, 200px); height: auto; color: var(--accent-2); opacity: .9; animation: breathe 4s ease-in-out infinite; }
+  @keyframes breathe { 50% { opacity: .55; transform: scale(.97); } }
+  .idle h1 { margin: 0; font: 600 clamp(28px, 3.4vw, 70px)/1.1 var(--font-display); }
+  .idle p { margin: 0; max-width: 38em; font-size: clamp(15px, 1.5vw, 28px); line-height: 1.45; color: rgba(255,255,255,.6); }
+  .idle .name { color: #fff; font-weight: 600; }
+  body.state-idle .idle { display: flex; }
+  body.state-idle .stage { display: none; }
+
+  .hint {
+    position: fixed; bottom: 3vh; left: 0; right: 0; text-align: center;
+    font-size: 13px; color: rgba(255,255,255,.4); transition: opacity 600ms ease;
+  }
+  body.idle-ui .hint { opacity: 0; }
+</style>
+</head>
+<body class="state-idle">
+  <div class="backdrop"><img id="bgA" alt=""><img id="bgB" alt=""><div class="tint"></div></div>
+
+  <div class="idle">
+    <div class="glyph" id="idleGlyph"></div>
+    <h1 id="idleTitle"></h1>
+    <p id="idleHint"></p>
+  </div>
+
+  <div class="stage">
+    <div class="cover" id="cover"></div>
+    <div class="info">
+      <div class="source"><span id="source" class="ellipsis"></span><span class="pill" id="pill"></span></div>
+      <div class="title" id="title"></div>
+      <div class="artist ellipsis" id="artist"></div>
+      <div class="album ellipsis" id="album"></div>
+      <div class="progress">
+        <div class="bar"><i id="fill"></i></div>
+        <div class="times"><span id="pos">0:00</span><span id="dur">0:00</span></div>
+      </div>
+      <div class="controls">
+        <button class="ctrl" id="prev"></button>
+        <button class="ctrl main" id="play"></button>
+        <button class="ctrl" id="next"></button>
+      </div>
+      <div class="note" id="note"></div>
+    </div>
+  </div>
+
+  <div class="chrome">
+    <div class="glyph" id="brandGlyph"></div>
+    <span>Flick AirPlay</span>
+    <div class="spacer"></div>
+    <span class="clock" id="clock"></span>
+    <button id="settings"></button>
+    <button id="exit"></button>
+  </div>
+  <div class="hint" id="hint"></div>
+
+<script src="common.js"></script>
+<script src="full.js"></script>
+</body>
+</html>
