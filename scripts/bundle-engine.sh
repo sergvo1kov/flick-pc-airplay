@@ -71,3 +71,4 @@ done
 
 echo "bundle size: $(du -sh "$OUT" | cut -f1)"
 ls "$OUT/lib/gstreamer-1.0"
+echo "::notice title=Engine bundle::size $(du -sh "$OUT" | cut -f1), $(ls "$OUT/bin" | wc -l) files in bin, plugins: $(ls "$OUT/lib/gstreamer-1.0" | sed 's/^libgst//; s/\.dll$//' | tr '\n' ' ')"
