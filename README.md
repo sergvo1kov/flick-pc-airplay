@@ -1,81 +1,140 @@
+<div align="center">
+
+<img src="docs/icon.png" width="104" alt="Flick AirPlay">
+
 # Flick AirPlay для Windows
 
-AirPlay-приймач для ПК: музика з iPhone чи iPad грає через комп'ютер так само, як на Apple TV або колонці з AirPlay.
+**Музика, YouTube і екран iPhone — на твоєму ПК через AirPlay.**<br>
+Як Apple TV або колонка з AirPlay, тільки це твій комп'ютер.
 
-- ПК з'являється у списку AirPlay в Пункті керування та в «Музиці»
-- звук без втрат (ALAC), гучність регулюється з iPhone
-- обкладинка, назва, виконавець, альбом, прогрес треку
-- **пульт у зворотний бік**: пауза, наступний/попередній трек прямо з ПК, клавішами клавіатури (Play/Pause, Next, Prev) або з трею
-- мініплеєр у кутку екрана та повноекранний плеєр (зручно, якщо ПК під'єднаний до ТВ)
-- живе в треї, запускається разом з Windows
-- інтерфейс українською, російською та англійською (за мовою Windows)
+[![Release](https://img.shields.io/github/v/release/sergvo1kov/flick-pc-airplay?label=версія&color=8a63ff)](https://github.com/sergvo1kov/flick-pc-airplay/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/sergvo1kov/flick-pc-airplay/total?label=завантажень&color=8a63ff)](https://github.com/sergvo1kov/flick-pc-airplay/releases)
+[![Build](https://github.com/sergvo1kov/flick-pc-airplay/actions/workflows/build.yml/badge.svg)](https://github.com/sergvo1kov/flick-pc-airplay/actions/workflows/build.yml)
+![Windows 10/11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4?logo=windows&logoColor=white)
+[![License: GPL-3.0](https://img.shields.io/badge/ліцензія-GPL--3.0-lightgrey)](LICENSE)
 
-Повтор екрана є як експериментальна опція — повноцінно ним займемося на наступному етапі.
+### [⬇️ Завантажити інсталятор](https://github.com/sergvo1kov/flick-pc-airplay/releases/latest)
+
+<img src="docs/hero.png" width="860" alt="Повноекранний плеєр і мініплеєр Flick AirPlay">
+
+[Українська](#можливості) · [English](#english)
+
+</div>
+
+## Можливості
+
+| | |
+|---|---|
+| 🎵 **Музика без втрат** | Apple Music, Spotify, YouTube Music, подкасти — звук ALAC, гучність регулюється з iPhone |
+| 🖼️ **Зараз грає** | Обкладинка, назва, виконавець, альбом і прогрес треку — у мініплеєрі в кутку або на весь екран |
+| ⏯️ **Керування з ПК** | Пауза й перемикання треків кнопками плеєра, медіаклавішами клавіатури, з трею або зі Stream Dock |
+| 📺 **YouTube** | Кнопка AirPlay у застосунку YouTube показує відео на ПК |
+| 📱 **Повтор екрана** | Екран iPhone чи iPad на моніторі або ТВ, під'єднаному до ПК |
+| 🔄 **Автооновлення** | Нові версії завантажуються у фоні й ставляться в один клік |
+| 🌐 **Три мови** | Українська, російська, англійська — за мовою Windows |
+
+Bonjour від Apple, iTunes та інші програми ставити **не потрібно** — усе вже всередині.
 
 ## Встановлення
 
-1. Завантажте `FlickAirPlay-Setup-x.y.z.exe` з розділу **Releases** (або з **Actions → останній запуск → Artifacts**).
-2. Запустіть. Windows SmartScreen може попередити, що видавець невідомий (інсталятор не підписаний сертифікатом) — «Докладніше» → «Виконати все одно».
-3. Інсталятор сам додає правила брандмауера для приватних мереж.
-4. Перевірте, що ваша домашня мережа у Windows позначена як **Приватна** (Параметри → Мережа та Інтернет → Wi-Fi/Ethernet → Тип профілю мережі). Якщо вона «Загальнодоступна», застосунок про це попередить.
-
-Bonjour від Apple ставити **не потрібно**: рушій має власний mDNS.
+1. Завантаж **`FlickAirPlay-Setup-x.y.z.exe`** з [останнього релізу](https://github.com/sergvo1kov/flick-pc-airplay/releases/latest) і запусти.
+2. Windows SmartScreen може попередити, що видавець невідомий (інсталятор не підписаний платним сертифікатом): **«Докладніше» → «Виконати все одно»**.
+3. Інсталятор попросить права адміністратора — щоб відкрити брандмауер для AirPlay у приватних мережах.
+4. Перевір, що домашня мережа у Windows **Приватна**: Параметри → Мережа та Інтернет → Wi-Fi → властивості мережі → Тип профілю. Якщо вона «Загальнодоступна», застосунок підкаже.
 
 ## Як користуватися
 
-На iPhone: Пункт керування → картка музики → значок AirPlay → виберіть назву свого ПК (за замовчуванням «Flick AirPlay», змінюється в налаштуваннях).
+**Музика:** Пункт керування на iPhone → картка музики → значок AirPlay → вибери свій ПК (за замовчуванням «Flick AirPlay», назва змінюється в налаштуваннях).
+
+**YouTube:** у плеєрі YouTube натисни значок AirPlay → твій ПК.
+
+**Повтор екрана:** Пункт керування → «Повтор екрана» → твій ПК. Alt+Enter — вікно / весь екран.
+
+<p align="center">
+  <img src="docs/mini.png" width="410" alt="Мініплеєр">&nbsp;&nbsp;
+  <img src="docs/settings.png" width="300" alt="Налаштування">
+</p>
 
 | Дія | Як |
 |---|---|
 | Пауза / продовжити | кнопка в плеєрі, `Пробіл`, медіаклавіша Play/Pause, меню трею |
 | Наступний / попередній | кнопки, `→` / `←`, медіаклавіші |
 | Гучність iPhone | `↑` / `↓` у плеєрі або кнопки гучності на самому iPhone |
-| Повноекранний режим | кнопка ⛶ у мініплеєрі, `F`, подвійний клік по значку в треї; вихід — `Esc` |
+| Повноекранний плеєр | кнопка ⛶ у мініплеєрі, `F`, подвійний клік по значку в треї; вихід — `Esc` |
 
-### Stream Dock / Stream Deck / ярлики
+### Stream Dock, Stream Deck і ярлики
 
-Окрім медіаклавіш, застосунок приймає команди з командного рядка — зручно для кнопок Stream Dock (дія «Відкрити / Запустити програму» з аргументом):
+Кожна кнопка — дія «Відкрити програму» з аргументом:
 
 ```
 "C:\Program Files\FlickAirPlay\FlickAirPlay.exe" --cmd=playpause
 ```
 
-Команди: `playpause`, `next`, `prev`, `volup`, `voldown`, `full` (повноекранний плеєр), `mini`, `settings`. Якщо застосунок уже запущено, команда передається йому миттєво, друге вікно не відкривається.
+Команди: `playpause` · `next` · `prev` · `volup` · `voldown` · `full` · `mini` · `settings`. Команда миттєво передається вже запущеному застосунку, друге вікно не відкривається.
+
+### Що не покажеться
+
+Netflix, Apple TV+, Disney+ та інші сервіси із захистом DRM через AirPlay віддають лише звук, без картинки. Це обмеження протоколу, а не застосунку.
+
+## Якщо щось не так
+
+| Проблема | Що зробити |
+|---|---|
+| iPhone не бачить ПК | Мережа у Windows має бути **Приватною**; iPhone і ПК — в одній мережі |
+| Керування з ПК не працює | Онови до останньої версії: **Налаштування → Оновлення → Перевірити** |
+| Інше | Трей → «Відкрити папку логів» → прикріпи `flick-airplay.log` до [issue](https://github.com/sergvo1kov/flick-pc-airplay/issues) |
+
+Що змінилось у кожній версії — у [CHANGELOG.md](CHANGELOG.md).
 
 ## Як це влаштовано
 
 ```
-iPhone ──AirPlay──▶ uxplay.exe (рушій, GStreamer) ──▶ звук Windows
-   ▲                     │  meta.txt / cover.jpg / dacp.txt / консоль
+iPhone ──AirPlay──▶ uxplay.exe (рушій, GStreamer) ──▶ звук і відео у Windows
+   ▲                     │  метадані / обкладинка / пульт / журнал
    │                     ▼
    └──DACP (пульт)── Flick AirPlay (Electron): трей, плеєр, налаштування
 ```
 
-- **Рушій** — [UxPlay](https://github.com/FDH2/UxPlay) (GPL-3.0), зібраний під Windows з GStreamer. Параметри передаються через UTF-8 файл `uxplay.rc`, тому кирилична назва пристрою працює.
-- **Пульт** — DACP: iPhone повідомляє свій `DACP-ID` і токен `Active-Remote`, застосунок знаходить його сервіс `iTunes_Ctrl_<ID>` через mDNS-запит прямо на IP телефону і шле `GET /ctrl-int/1/playpause` тощо. Команди йдуть по черзі, при зміні порту — повторний пошук.
-- **Пауза** (як в Android-версії): iOS при паузі просто зупиняє потік, сесія жива. Плеєр заморожує прогрес і тримає картку до 15 хвилин. Натиснута на ПК пауза показується одразу й самовиправляється, якщо телефон не відреагував.
+- **Рушій** — [UxPlay](https://github.com/FDH2/UxPlay), зібраний під Windows разом з GStreamer. Своя служба mDNS, тож Bonjour не потрібен.
+- **Пульт** — протокол DACP: застосунок знаходить у мережі пульт iPhone (`iTunes_Ctrl_<ID>`) і надсилає йому `playpause`, `nextitem` тощо — так само, як це роблять колонки з AirPlay.
+- **Пауза** — iOS при паузі просто зупиняє потік. Плеєр заморожує прогрес і тримає картку треку до 15 хвилин.
 
-## Оновлення
+<details>
+<summary><b>Збірка і випуск версій</b></summary>
 
-Застосунок сам перевіряє нові версії (через 15 с після запуску і кожні 6 годин), завантажує їх у фоні й ставить при виході або кнопкою «Перезапустити й оновити» в налаштуваннях.
+Усе збирається в GitHub Actions (`.github/workflows/build.yml`): UxPlay під MSYS2, пакування рушія з GStreamer, перевірка рушія в ізоляції (кодеки, HTTPS, справжні HLS-потоки), інсталятор NSIS.
 
-Випуск нової версії: підніміть `version` у `package.json` і запуште в `main` — CI побачить, що релізу з такою версією ще немає, сам створить тег `vX.Y.Z` і реліз. (Тег `v*`, запушений вручну, теж працює.)
-
-CI збирає інсталятор і викладає реліз з `latest.yml` та `.blockmap`. Скрипт `scripts/check-update-feed.js` перевіряє, що `latest.yml` збігається з інсталятором (розмір, SHA-512), а після публікації завантажує фід так само, як це зробить застосунок у користувача.
-
-## Розробка
-
-Потрібні Node.js 22+ (для застосунку) і, для рушія, MSYS2. Найпростіше — збирати все в GitHub Actions (`.github/workflows/build.yml`): кожен push у `main` дає інсталятор в Artifacts, тег `v*` — реліз.
+Нова версія: підніми `version` у `package.json`, додай розділ у `CHANGELOG.md` і запуш у `main`. CI сам створить тег `vX.Y.Z`, реліз з описом із CHANGELOG і фід оновлень (`latest.yml`), а потім перевірить, що застосунок у користувача зможе його завантажити.
 
 ```bash
-npm test            # юніт-тести: mDNS, DACP з емуляцією iPhone, парсери, сесія
-python3 tests/ui/render.py shots uk   # скриншоти вікон з тестовими даними (Playwright)
+npm test                               # юніт-тести: mDNS, DACP з емуляцією iPhone, сесія, оновлення
+python3 tests/ui/render.py shots uk    # скриншоти вікон з тестовими даними
 ```
 
-Логи: трей → «Відкрити папку логів» (`%APPDATA%\Flick AirPlay\logs`).
+</details>
 
 ---
 
-**English:** Windows AirPlay audio receiver with now-playing UI, cover art and reverse remote control (DACP), built on UxPlay + GStreamer and Electron. Download the installer from Releases.
+<a id="english"></a>
 
-Автор: Serhii Volkov ([@sergvo1kov](https://github.com/sergvo1kov)) · Ліцензія GPL-3.0 · Сторонні компоненти: [THIRD_PARTY.md](THIRD_PARTY.md)
+## English
+
+**Flick AirPlay** turns a Windows PC into an AirPlay receiver for iPhone and iPad.
+
+- **Music** in lossless ALAC with cover art, track info and progress — in a corner mini player or full screen
+- **Control from the PC**: play/pause and skip with the player buttons, keyboard media keys, the tray or a Stream Dock (`FlickAirPlay.exe --cmd=playpause|next|prev|…`)
+- **YouTube** videos via the AirPlay button in the YouTube app, and **screen mirroring**
+- **Automatic updates**, no Bonjour or iTunes required, UI in Ukrainian, Russian and English
+
+**Install:** download `FlickAirPlay-Setup-x.y.z.exe` from the [latest release](https://github.com/sergvo1kov/flick-pc-airplay/releases/latest). If SmartScreen warns about an unknown publisher, choose *More info → Run anyway*. Make sure your home network is set to **Private** in Windows.
+
+DRM-protected services (Netflix, Apple TV+, …) send audio only over AirPlay.
+
+---
+
+<div align="center">
+
+Автор — **Serhii Volkov** ([@sergvo1kov](https://github.com/sergvo1kov)) · [GPL-3.0](LICENSE) · Сторонні компоненти: [THIRD_PARTY.md](THIRD_PARTY.md)<br>
+Рушій AirPlay — [UxPlay](https://github.com/FDH2/UxPlay). AirPlay, iPhone та iPad — торговельні марки Apple Inc.; проєкт не пов'язаний з Apple.
+
+</div>

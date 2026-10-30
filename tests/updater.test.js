@@ -115,3 +115,20 @@ test('feed: local check passes on a good build and fails on a bad one', () => {
   assert.throws(() => execFileSync('node', [script, 'local', makeDist(true), '0.3.0'], { stdio: 'pipe' }));
   assert.throws(() => execFileSync('node', [script, 'local', makeDist(), '9.9.9'], { stdio: 'pipe' }));
 });
+
+test('release notes: built from CHANGELOG.md for every released version', () => {
+  const { changelogSection, releaseNotes } = require('../scripts/release-notes');
+  const text = fs.readFileSync(path.join(__dirname, '..', 'CHANGELOG.md'), 'utf8');
+  for (const v of ['0.1.0', '0.2.0', '0.2.1', '0.2.2', '0.2.3']) {
+    const sec = changelogSection(text, v);
+    assert.ok(sec && sec.length > 40, `CHANGELOG has a section for ${v}`);
+    assert.ok(!/^## /m.test(sec), `${v} section does not swallow the next one`);
+  }
+  const notes = releaseNotes(text, '0.2.3', 'a/b');
+  assert.match(notes, /releases\/download\/v0\.2\.3\/FlickAirPlay-Setup-0\.2\.3\.exe/);
+  assert.match(notes, /DACP-ID/);
+  assert.match(releaseNotes(text, '9.9.9'), /Виправлення та покращення/);
+  // the version being released must have notes before it ships
+  const pkg = require('../package.json');
+  assert.ok(changelogSection(text, pkg.version), `CHANGELOG.md has a section for package.json version ${pkg.version}`);
+});
