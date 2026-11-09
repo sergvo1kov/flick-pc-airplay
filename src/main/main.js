@@ -12,6 +12,7 @@ const { SettingsStore } = require('./settings');
 const P = require('./parsers');
 const i18n = require('./i18n');
 const { Updater, loadAutoUpdater } = require('./updater');
+const dock = require('./dock');
 
 // Media keys: Chromium on Windows routes them through its own media-session
 // (SMTC) handling, which depends on window state - after the mini player was
@@ -86,36 +87,115 @@ const webPreferences = {
 function allWindows() { return [miniWin, fullWin, settingsWin].filter((w) => w && !w.isDestroyed()); }
 function send(channel, payload) { for (const w of allWindows()) w.webContents.send(channel, payload); }
 
-function miniBounds(display) {
-  const wa = (display || screen.getPrimaryDisplay()).workArea;
-  const width = 380;
-  const height = 160;
-  return { width, height, x: wa.x + wa.width - width - 16, y: wa.y + wa.height - height - 16 };
+const MINI_SIZE = { width: 380, height: 160 };
+let miniApplying = 0;          // ignore 'moved' events caused by our own setBounds
+let topmostTimer = null;
+
+function miniAnchor() {
+  return settings.miniAnchor || dock.defaultAnchor(screen.getPrimaryDisplay().id);
+}
+
+function miniTargetBounds() {
+  const a = miniAnchor();
+  const d = dock.displayFor(a, screen.getAllDisplays(), screen.getPrimaryDisplay());
+  return dock.boundsFor(a, d.workArea, MINI_SIZE);
+}
+
+function placeMini() {
+  if (!miniWin || miniWin.isDestroyed()) return;
+  miniApplying = Date.now();
+  miniWin.setBounds(miniTargetBounds());
+}
+
+function saveMiniAnchor(anchor) {
+  settings = settingsStore.update({ miniAnchor: anchor }).settings;
+}
+
+/** User finished dragging: magnet to nearby edges and remember the spot. */
+function onMiniMoved() {
+  if (!miniWin || miniWin.isDestroyed() || Date.now() - miniApplying < 400) return;
+  const b = miniWin.getBounds();
+  const d = screen.getDisplayMatching(b);
+  saveMiniAnchor(dock.anchorFromBounds(b, d.workArea, d.id, { pin: settings.miniPinned }));
+  placeMini();
+}
+
+/**
+ * Top-most handling. Pinned: highest level, re-asserted every 2 s and whenever
+ * something else takes the top (games in borderless mode), and the window never
+ * takes keyboard focus, so clicking it does not pull you out of the game.
+ */
+function applyMiniLayer() {
+  if (!miniWin || miniWin.isDestroyed()) return;
+  const pinned = settings.miniPinned;
+  clearInterval(topmostTimer);
+  topmostTimer = null;
+  miniWin.setFocusable(!pinned);
+  if (pinned) {
+    miniWin.setAlwaysOnTop(true, 'screen-saver');
+    miniWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    topmostTimer = setInterval(() => {
+      if (miniWin && !miniWin.isDestroyed() && miniWin.isVisible()) {
+        miniWin.setAlwaysOnTop(true, 'screen-saver');
+        miniWin.moveTop();
+      }
+    }, 2000);
+  } else {
+    miniWin.setVisibleOnAllWorkspaces(false);
+    miniWin.setAlwaysOnTop(settings.miniAlwaysOnTop, settings.miniAlwaysOnTop ? 'floating' : 'normal');
+  }
+  miniWin.webContents.send('mini-pinned', pinned);
+}
+
+function setMiniPinned(pinned) {
+  if (miniWin && !miniWin.isDestroyed() && miniWin.isVisible()) {
+    // pin where the player is now: glue it to the nearest edge / corner
+    const b = miniWin.getBounds();
+    const d = screen.getDisplayMatching(b);
+    settings = settingsStore.update({
+      miniPinned: !!pinned,
+      miniAnchor: dock.anchorFromBounds(b, d.workArea, d.id, { pin: !!pinned }),
+    }).settings;
+  } else {
+    settings = settingsStore.update({ miniPinned: !!pinned }).settings;
+  }
+  log(`mini player ${pinned ? 'pinned' : 'unpinned'}`);
+  placeMini();
+  applyMiniLayer();
+  rebuildTrayMenu();
 }
 
 function createMini() {
   if (miniWin && !miniWin.isDestroyed()) return miniWin;
   miniWin = new BrowserWindow({
-    ...miniBounds(),
+    ...miniTargetBounds(),
     frame: false,
     resizable: false,
     maximizable: false,
+    minimizable: false,
     fullscreenable: false,
     skipTaskbar: true,
-    alwaysOnTop: settings.miniAlwaysOnTop,
+    alwaysOnTop: true,
+    focusable: !settings.miniPinned,
     show: false,
     backgroundColor: '#15151a',
     title: 'Flick AirPlay',
     webPreferences,
   });
   miniWin.loadFile(path.join(RENDERER, 'mini.html'));
-  miniWin.on('closed', () => { miniWin = null; });
+  miniWin.webContents.on('did-finish-load', () => applyMiniLayer());
+  miniWin.on('moved', onMiniMoved);
+  // something else grabbed the top while pinned (e.g. a game going topmost)
+  miniWin.on('always-on-top-changed', (_e, onTop) => {
+    if (!onTop && settings.miniPinned) setTimeout(applyMiniLayer, 50);
+  });
+  miniWin.on('closed', () => { clearInterval(topmostTimer); miniWin = null; });
   return miniWin;
 }
 
 function showMini() {
   const w = createMini();
-  const show = () => { w.showInactive(); };
+  const show = () => { placeMini(); applyMiniLayer(); w.showInactive(); };
   if (w.webContents.isLoading()) w.webContents.once('did-finish-load', show); else show();
 }
 
@@ -208,6 +288,7 @@ function rebuildTrayMenu() {
   }
   items.push(
     { label: T.menuMini, click: () => showMini() },
+    { label: T.menuPinMini, type: 'checkbox', checked: !!settings.miniPinned, click: (item) => { setMiniPinned(item.checked); if (item.checked) showMini(); } },
     { label: T.menuFull, click: () => openFull() },
     { type: 'separator' },
     { label: T.menuPlayPause, enabled: canControl, click: () => command('playpause') },
@@ -423,6 +504,7 @@ ipcMain.handle('get-init', (e) => ({
   version: app.getVersion(),
   update: updater ? updater.snapshot() : { status: 'disabled', current: app.getVersion() },
   isFull: !!(fullWin && e.sender === fullWin.webContents),
+  pinned: !!settings.miniPinned,
 }));
 ipcMain.handle('command', (_e, name) => command(name));
 ipcMain.handle('save-settings', async (_e, patch) => {
@@ -432,7 +514,7 @@ ipcMain.handle('save-settings', async (_e, patch) => {
   applyLanguage();
   applyAutostart();
   if (updater) updater.setAutoInstall(settings.autoUpdate);
-  if (miniWin && !miniWin.isDestroyed()) miniWin.setAlwaysOnTop(settings.miniAlwaysOnTop);
+  applyMiniLayer();
   updateMediaKeys(session.status !== 'idle');
   if (engineChanged) await restartEngine();
   if (langChanged) for (const w of allWindows()) w.webContents.reload();
@@ -456,6 +538,7 @@ ipcMain.on('open-full', () => openFull());
 ipcMain.on('close-full', () => closeFull());
 ipcMain.on('open-settings', () => openSettings());
 ipcMain.on('hide-mini', () => hideMini());
+ipcMain.on('toggle-pin', () => setMiniPinned(!settings.miniPinned));
 
 // ---------------------------------------------------------------- lifecycle
 // Stream Dock / shortcuts: FlickAirPlay.exe --cmd=playpause|next|prev|volup|voldown|full|mini|settings
@@ -517,7 +600,9 @@ app.whenReady().then(async () => {
   });
   updater.start();
   screen.on('display-added', () => send('displays-changed'));
-  screen.on('display-removed', () => send('displays-changed'));
+  // games switching resolution, monitors added/removed: keep the player on its edge
+  screen.on('display-metrics-changed', () => { if (miniWin && !miniWin.isDestroyed() && miniWin.isVisible()) placeMini(); });
+  screen.on('display-removed', () => { send('displays-changed'); placeMini(); });
 
   const firstRunFlag = path.join(userDir, '.first-run-done');
   if (!fs.existsSync(firstRunFlag)) {

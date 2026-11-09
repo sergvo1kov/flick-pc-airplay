@@ -13,6 +13,14 @@
     cover.set(store.cover);
     window.flick.onCover((url) => cover.set(url));
 
+    function showPinned(pinned) {
+      document.body.classList.toggle('pinned', !!pinned);
+      $('pin').innerHTML = pinned ? ICONS.pinned : ICONS.pin;
+      $('pin').title = pinned ? T.unpinMini : T.pinMini;
+    }
+    showPinned(init.pinned);
+    window.flick.onPinned(showPinned);
+    $('pin').onclick = () => window.flick.togglePin();
     $('full').onclick = () => window.flick.openFull();
     $('close').onclick = () => window.flick.hideMini();
     $('prev').onclick = () => window.flick.command('prev');

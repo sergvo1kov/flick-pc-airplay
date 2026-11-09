@@ -42,6 +42,7 @@ window.flick = {
   openFull(){}, closeFull(){}, openSettings(){}, hideMini(){},
   onState(){}, onCover(){}, onEngine(){}, onRemote(){}, onRemoteError(){}, onDisplaysChanged(){},
   checkUpdate: async () => {}, installUpdate: async () => {}, onUpdate(){},
+  togglePin(){}, onPinned(){},
 };
 """
 
@@ -69,6 +70,7 @@ base = {'strings': strings, 'lang': LANG, 'settings': settings, 'version': '0.2.
 
 shot('mini.html', (380, 160), {**base, 'state': state('playing'), 'cover': cover}, 'mini-playing.png')
 shot('mini.html', (380, 160), {**base, 'state': state('paused', paused=True), 'cover': None}, 'mini-paused-nocover.png')
+shot('mini.html', (380, 160), {**base, 'state': state('playing'), 'cover': cover, 'pinned': True}, 'mini-pinned.png')
 shot('full.html', (1920, 1080), {**base, 'state': state('playing'), 'cover': cover}, 'full-playing.png', 1800, 1)
 shot('full.html', (1920, 1080), {**base, 'state': state('paused', paused=True), 'cover': cover}, 'full-paused.png', 1800, 1)
 shot('full.html', (3440, 1440), {**base, 'state': state('playing', title='A Very Long Track Title That Should Wrap Onto Two Lines Nicely'), 'cover': cover}, 'full-ultrawide.png', 1800, 1)

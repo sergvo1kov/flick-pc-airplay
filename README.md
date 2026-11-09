@@ -27,6 +27,7 @@
 |---|---|
 | 🎵 **Музика без втрат** | Apple Music, Spotify, YouTube Music, подкасти — звук ALAC, гучність регулюється з iPhone |
 | 🖼️ **Зараз грає** | Обкладинка, назва, виконавець, альбом і прогрес треку — у мініплеєрі в кутку або на весь екран |
+| 📌 **Поверх ігор** | Закріпи мініплеєр біля краю екрана — він лишається поверх гри й не забирає фокус |
 | ⏯️ **Керування з ПК** | Пауза й перемикання треків кнопками плеєра, медіаклавішами клавіатури, з трею або зі Stream Dock |
 | 📺 **YouTube** | Кнопка AirPlay у застосунку YouTube показує відео на ПК |
 | 📱 **Повтор екрана** | Екран iPhone чи iPad на моніторі або ТВ, під'єднаному до ПК |
@@ -61,6 +62,12 @@ Bonjour від Apple, iTunes та інші програми ставити **н�
 | Наступний / попередній | кнопки, `→` / `←`, медіаклавіші |
 | Гучність iPhone | `↑` / `↓` у плеєрі або кнопки гучності на самому iPhone |
 | Повноекранний плеєр | кнопка ⛶ у мініплеєрі, `F`, подвійний клік по значку в треї; вихід — `Esc` |
+
+### Мініплеєр поверх гри
+
+Натисни 📌 у мініплеєрі (або трей → «Закріпити мініплеєр»). Плеєр прилипне до найближчого краю чи кута, стане поверх усіх вікон і не забиратиме фокус — пауза й перемикання треків не викидають з гри. Щоб пересунути — відкріпи, перетягни (біля країв він притягується магнітом) і закріпи знову.
+
+Гра має працювати **у вікні** або **у вікні без рамки (borderless)**: в ексклюзивному повноекранному режимі поверх неї не показується жодне вікно Windows.
 
 ### Stream Dock, Stream Deck і ярлики
 
@@ -122,6 +129,7 @@ python3 tests/ui/render.py shots uk    # скриншоти вікон з тес
 **Flick AirPlay** turns a Windows PC into an AirPlay receiver for iPhone and iPad.
 
 - **Music** in lossless ALAC with cover art, track info and progress — in a corner mini player or full screen
+- **Pin the mini player** to a screen edge: it stays above games (windowed/borderless) without stealing focus
 - **Control from the PC**: play/pause and skip with the player buttons, keyboard media keys, the tray or a Stream Dock (`FlickAirPlay.exe --cmd=playpause|next|prev|…`)
 - **YouTube** videos via the AirPlay button in the YouTube app, and **screen mirroring**
 - **Automatic updates**, no Bonjour or iTunes required, UI in Ukrainian, Russian and English

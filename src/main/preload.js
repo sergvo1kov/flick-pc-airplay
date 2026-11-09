@@ -20,6 +20,8 @@ contextBridge.exposeInMainWorld('flick', {
   closeFull: () => ipcRenderer.send('close-full'),
   openSettings: () => ipcRenderer.send('open-settings'),
   hideMini: () => ipcRenderer.send('hide-mini'),
+  togglePin: () => ipcRenderer.send('toggle-pin'),
+  onPinned: (cb) => on('mini-pinned', cb),
   onState: (cb) => on('state', cb),
   onCover: (cb) => on('cover', cb),
   onEngine: (cb) => on('engine', cb),

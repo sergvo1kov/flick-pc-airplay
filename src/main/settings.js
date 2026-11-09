@@ -1,5 +1,6 @@
 'use strict';
 const fs = require('fs');
+const { validAnchor } = require('./dock');
 const path = require('path');
 
 const DEFAULTS = Object.freeze({
@@ -10,6 +11,8 @@ const DEFAULTS = Object.freeze({
   autoFullscreen: false,
   fullscreenDisplay: 'auto',   // auto (where the mini player is) | display id
   miniAlwaysOnTop: true,
+  miniPinned: false,           // pinned to a screen edge, above games, never steals focus
+  miniAnchor: null,            // remembered mini player position (see dock.js)
   mediaKeys: true,             // keyboard media keys control the iPhone while connected
   taperVolume: true,           // AirPlay volume curve like Apple speakers
   allowTakeover: true,         // another device may take over (like Apple TV)
@@ -29,6 +32,7 @@ function sanitize(input) {
   }
   s.deviceName = String(s.deviceName).replace(/["\r\n\t]/g, '').trim().slice(0, 48) || DEFAULTS.deviceName;
   if (!['auto', 'uk', 'ru', 'en'].includes(s.language)) s.language = 'auto';
+  s.miniAnchor = validAnchor(input && input.miniAnchor);
   if (!['auto', 'wasapi2sink', 'wasapisink', 'directsoundsink'].includes(s.audioSink)) s.audioSink = 'auto';
   return s;
 }
