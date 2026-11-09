@@ -21,6 +21,42 @@
     showPinned(init.pinned);
     window.flick.onPinned(showPinned);
     $('pin').onclick = () => window.flick.togglePin();
+
+    // Drag anywhere except buttons. Screen coordinates stay valid while the
+    // window moves under the cursor; moves are batched per animation frame.
+    let drag = null;
+    let pending = null;
+    document.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || e.target.closest('button')) return;
+      drag = { x: e.screenX, y: e.screenY, moved: false, id: e.pointerId };
+      try { document.body.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+    });
+    document.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const dx = e.screenX - drag.x;
+      const dy = e.screenY - drag.y;
+      if (!drag.moved) {
+        if (Math.abs(dx) + Math.abs(dy) < 4) return;   // a click, not a drag
+        drag.moved = true;
+        document.body.classList.add('dragging');
+        window.flick.dragStart();
+      }
+      if (!pending) requestAnimationFrame(() => { if (pending) window.flick.dragMove(pending.dx, pending.dy); pending = null; });
+      pending = { dx, dy };
+    });
+    const endDrag = () => {
+      if (!drag) return;
+      if (drag.moved) {
+        if (pending) window.flick.dragMove(pending.dx, pending.dy);
+        pending = null;
+        window.flick.dragEnd();
+      }
+      try { document.body.releasePointerCapture(drag.id); } catch (_) { /* ignore */ }
+      document.body.classList.remove('dragging');
+      drag = null;
+    };
+    document.addEventListener('pointerup', endDrag);
+    document.addEventListener('pointercancel', endDrag);
     $('full').onclick = () => window.flick.openFull();
     $('close').onclick = () => window.flick.hideMini();
     $('prev').onclick = () => window.flick.command('prev');

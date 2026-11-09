@@ -114,6 +114,12 @@ function saveMiniAnchor(anchor) {
 /** User finished dragging: magnet to nearby edges and remember the spot. */
 function onMiniMoved() {
   if (!miniWin || miniWin.isDestroyed() || Date.now() - miniApplying < 400) return;
+  finishMiniMove();
+}
+
+/** Snap (pinned: to the nearest edge/corner; free: magnet) and save. */
+function finishMiniMove() {
+  if (!miniWin || miniWin.isDestroyed()) return;
   const b = miniWin.getBounds();
   const d = screen.getDisplayMatching(b);
   saveMiniAnchor(dock.anchorFromBounds(b, d.workArea, d.id, { pin: settings.miniPinned }));
@@ -539,6 +545,25 @@ ipcMain.on('close-full', () => closeFull());
 ipcMain.on('open-settings', () => openSettings());
 ipcMain.on('hide-mini', () => hideMini());
 ipcMain.on('toggle-pin', () => setMiniPinned(!settings.miniPinned));
+
+// Own drag for the mini player: works while pinned too (a non-focusable window
+// can't be reliably dragged by Windows itself). On drop it snaps and is saved.
+let miniDrag = null;
+ipcMain.on('mini-drag-start', () => {
+  if (miniWin && !miniWin.isDestroyed()) miniDrag = { start: miniWin.getBounds() };
+});
+ipcMain.on('mini-drag-move', (_e, d) => {
+  if (!miniDrag || !miniWin || miniWin.isDestroyed() || !d) return;
+  const dx = Math.round(Number(d.dx) || 0);
+  const dy = Math.round(Number(d.dy) || 0);
+  miniApplying = Date.now();
+  miniWin.setBounds({ ...miniDrag.start, x: miniDrag.start.x + dx, y: miniDrag.start.y + dy });
+});
+ipcMain.on('mini-drag-end', () => {
+  if (!miniDrag) return;
+  miniDrag = null;
+  finishMiniMove();
+});
 
 // ---------------------------------------------------------------- lifecycle
 // Stream Dock / shortcuts: FlickAirPlay.exe --cmd=playpause|next|prev|volup|voldown|full|mini|settings
